@@ -19,7 +19,7 @@ function Settings({ settings, setSettings, handleSettingChange, settingNotes, se
       </div>
       <div className="setting-item">
         <label htmlFor="host">
-          host : port:
+          Minecraft host : port:
           {settingNotes.host && <span className="setting-note"> ({settingNotes.host})</span>}
         </label>
         <div>
@@ -51,6 +51,19 @@ function Settings({ settings, setSettings, handleSettingChange, settingNotes, se
           className="setting-input"
           value={settings.minecraft_version}
           onChange={(e) => handleSettingChange('minecraft_version', e.target.value)}
+        />
+      </div>
+      <div className="setting-item">
+        <label htmlFor="openai_api_key">
+          OpenAI API Key:
+          {settingNotes.openai_api_key && <span className="setting-note"> ({settingNotes.openai_api_key})</span>}
+        </label>
+        <input
+          id="openai_api_key"
+          type="password"
+          className="setting-input"
+          value={settings.openai_api_key}
+          onChange={(e) => handleSettingChange('openai_api_key', e.target.value)}
         />
       </div>
       <div className="setting-item">

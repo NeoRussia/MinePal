@@ -1,97 +1,18 @@
-import React, { useState, useEffect } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faMicrophone,
-  faMicrophoneSlash,
-} from "@fortawesome/free-solid-svg-icons";
+import React from "react";
 import "./Actions.css";
 
 function Actions({
   agentStarted,
   toggleAgent,
-  stopMicrophone,
   settings,
-  setSettings,
-  isMicrophoneActive,
-  inputDevices, // Add inputDevices prop
-  selectedInputDevice, // Add selectedInputDevice prop
-  setSelectedInputDevice // Add setSelectedInputDevice prop
+  setSettings
 }) {
-  const handleVoiceModeChange = (event) => {
-    setSettings(prevSettings => ({ ...prevSettings, voice_mode: event.target.value }));
-  };
-
-  const handleKeyBindingChange = (event) => {
-    setSettings(prevSettings => ({ ...prevSettings, key_binding: event.target.value }));
-  };
-
-  const handleKeyPress = (event) => {
-    setSettings(prevSettings => ({ ...prevSettings, key_binding: event.key }));
-  };
-
   const handleLanguageChange = (event) => {
     setSettings(prevSettings => ({ ...prevSettings, language: event.target.value }));
   };
 
-  const handleInputDeviceChange = (event) => {
-    setSelectedInputDevice(event.target.value);
-  };
-
-  useEffect(() => {
-    if (!agentStarted) {
-      stopMicrophone();
-    }
-  }, [agentStarted]);
-
   return (
     <div className="actions">
-      <div className="voice-settings">
-        <FontAwesomeIcon
-          icon={isMicrophoneActive ? faMicrophone : faMicrophoneSlash}
-          className={`microphone-icon ${
-            isMicrophoneActive ? "active" : "inactive"
-          }`}
-        />
-        <span htmlFor="voice-mode">Voice Mode:</span>
-        <select
-          id="voice-mode"
-          value={settings.voice_mode}
-          onChange={handleVoiceModeChange}
-          disabled={agentStarted} // Disable when agentStarted is true
-        >
-          <option value="always_on">Always On</option>
-          <option value="push_to_talk">Push to Talk</option>
-          <option value="toggle_to_talk">Toggle to Talk</option>
-          <option value="off">Off</option>
-        </select>
-        {(settings.voice_mode === "push_to_talk" || settings.voice_mode === "toggle_to_talk") && (
-          <input
-            type="text"
-            placeholder="Press a key"
-            value={settings.key_binding}
-            onChange={handleKeyBindingChange}
-            onKeyDown={handleKeyPress}
-            readOnly
-            disabled={agentStarted} // Disable when agentStarted is true
-            className="key-input"
-          />
-        )}
-      </div>
-      <div className="input-device-settings">
-        <span htmlFor="input-device">Input Device: </span>
-        <select
-          id="input-device"
-          value={selectedInputDevice}
-          onChange={handleInputDeviceChange}
-          disabled={agentStarted} // Disable when agentStarted is true
-        >
-          {inputDevices.map(device => (
-            <option key={device.deviceId} value={device.deviceId}>
-              {device.label || `Device ${device.deviceId}`}
-            </option>
-          ))}
-        </select>
-      </div>
       <div className="language-settings">
         <span htmlFor="language">Language/Accent:</span>
         <select

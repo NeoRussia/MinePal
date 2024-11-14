@@ -22,16 +22,17 @@ export class AgentProcess {
         this.agentProcess = null;
         this.restartCount = 0; // Track restart count
         this.lastRestartTime = Date.now(); // Track last restart time
-        this.notifyBotKicked = notifyBotKicked
+        this.notifyBotKicked = notifyBotKicked;
     }
 
     /**
      * Starts the agent process with the given profile and options.
      * @param {string} profile - The profile to use for the agent.
      * @param {string} userDataDir - The directory to store log files.
+     * @param {string} openai_api_key - OpenAI API Key.
      * @param {boolean} [load_memory=false] - Whether to load memory from a previous session.
      */
-    start(profile, userDataDir, load_memory=false) {
+    start(profile, userDataDir, openai_api_key, load_memory=false) {
         this.botName = profile;
         // Prepare arguments for the agent process
         let args = [path.join(app.getAppPath(), 'src/process/init-agent.js')]; // Adjust path
@@ -66,6 +67,7 @@ export class AgentProcess {
         // Spawn the agent process using Node.js's child_process.fork
         this.agentProcess = fork(path.join(app.getAppPath(), 'src/process/init-agent.js'), args, {
             stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
+            env: { OPENAI_API_KEY: openai_api_key },
         });
 
         // Pipe process output to log file
@@ -110,7 +112,7 @@ export class AgentProcess {
                     agentLogStream.write('Restarting agent...\n');
                     agentLogStream.end();
                 }
-                this.start(profile, userDataDir, true, 'Agent process restarted.');
+                this.start(profile, userDataDir, openai_api_key, true, 'Agent process restarted.');
             }
         });
     

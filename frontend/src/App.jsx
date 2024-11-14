@@ -4,12 +4,15 @@ import mixpanel from 'mixpanel-browser';
 import './App.css';
 import Settings from './components/Settings';
 import Actions from './components/Actions';
-import Transcription from './components/Transcription';
 
 mixpanel.init('a9bdd5c85dab5761be032f1c1650defa');
 
 const api = axios.create({
   baseURL: LOCAL_BE_HOST
+});
+
+const openai_api = axios.create({
+  baseURL: "https://api.openai.com/v1"
 });
 
 function App() {
@@ -20,22 +23,15 @@ function App() {
     player_username: "",
     profiles: [],
     whisper_to_player: false,
-    voice_mode: 'always_on',
-    key_binding: '',
-    language: 'en'
+    language: 'en',
+    openai_api_key: ''
   });
 
   const [error, setError] = useState(null);
-  const [socket, setSocket] = useState(null);
-  const [microphone, setMicrophone] = useState(null);
-  const [transcription, setTranscription] = useState("");
   const [agentStarted, setAgentStarted] = useState(false);
   const [selectedProfiles, setSelectedProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [startTime, setStartTime] = useState(null);
-  const [isMicrophoneActive, setIsMicrophoneActive] = useState(false);
-  const [inputDevices, setInputDevices] = useState([]);
-  const [selectedInputDevice, setSelectedInputDevice] = useState('');
 
   const handleProfileSelect = (profile) => {
     setSelectedProfiles(prev => 
@@ -53,6 +49,7 @@ function App() {
     host: "or \"localhost\", \"your.ip.address.here\"",
     port: "default is 25565",
     player_username: "your Minecraft username",
+    openai_api_key: "i.e. sk-..."
   }
 
   const fetchSettings = async () => {
@@ -90,25 +87,31 @@ function App() {
     }
   };
 
-  const fetchBackendAlive = async () => {
-    try {
-      const response = await api.get('/backend-alive');
-      if (!response.data.backend_alive) {
-        throw new Error("Backend is down.");
-      }
-    } catch (err) {
-      console.error("Failed to check backend status:", err);
-      setError(`Failed to check backend status: ${err.message}`);
-      throw err;
-    }
-  };
-
   const checkServerAlive = async (host, port) => {
     try {
         const response = await api.get('/check-server', { params: { host, port } });
         return response.data.alive;
     } catch (error) {
         console.error("Server ping failed:", error);
+        return false;
+    }
+  };
+
+  const checkOpenAIApiKeyValidity = async (openai_api_key) => {
+    try {
+        const response = await openai_api.get('/models', {
+          headers: {
+            'Authorization': `Bearer ${openai_api_key}`
+          }
+        });
+        if (response.status === 200) {
+          return true;
+        } else {
+          console.error("The OpenAI API key is invalid or an error occurred.", error);
+          return false;
+        }
+    } catch (error) {
+        console.error("The OpenAI API key is invalid or an error occurred.", error);
         return false;
     }
   };
@@ -120,7 +123,6 @@ function App() {
         console.log("Agent stopped successfully:", response.data);
         setAgentStarted(false);
         setError(null); // Clear errors on success
-        await stopMicrophone(); // Ensure microphone and WebSocket are shut down
 
         // Track the "Bot play time" event
         if (startTime) {
@@ -139,7 +141,6 @@ function App() {
       const emptyFields = Object.entries(settings)
         .filter(([key, value]) => {
           if (key === 'profiles') return value.length === 0;
-          if (key === 'key_binding' && (settings.voice_mode === 'always_on' || settings.voice_mode === 'off')) return false; // Skip key_binding check
           if (typeof value === 'string') return value.trim() === '';
           if (Array.isArray(value)) return value.length === 0;
           return value === null || value === undefined;
@@ -154,7 +155,7 @@ function App() {
       if (!isValidMinecraftUsername(settings.player_username)) {
         setError("Invalid Minecraft username. It should be 3-16 characters long and can only contain letters, numbers, and underscores.");
         return;
-    }
+      }
 
       const invalidProfileNames = selectedProfiles.filter(profile => !isValidMinecraftUsername(profile.name));
       if (invalidProfileNames.length > 0) {
@@ -172,6 +173,13 @@ function App() {
         setError("The Minecraft server is not reachable. Please check the host and port.");
         return;
       }
+
+      const isValidaOpenAIApiKey = await checkOpenAIApiKeyValidity(settings.openai_api_key);
+      if (!isValidaOpenAIApiKey) {
+        setError("The OpenAI API key is invalid or an error occurred.");
+        return;
+      }
+
       try {
         const filteredSettings = {
           ...settings,
@@ -193,11 +201,6 @@ function App() {
 
         // Set the start time for tracking
         setStartTime(Date.now());
-
-        // Automatically handle microphone based on voice mode
-        if (settings.voice_mode !== 'off') {
-          startMicrophone();
-        }
       } catch (error) {
         console.error("Failed to start agent:", error);
         setError(error.response?.data || error.message || "An unknown error occurred while starting the agent.");
@@ -208,93 +211,6 @@ function App() {
   const isValidMinecraftUsername = (username) => {
     const regex = /^[a-zA-Z0-9_]{3,16}$/;
     return regex.test(username);
-  };
-
-  const getMicrophone = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { deviceId: selectedInputDevice ? { exact: selectedInputDevice } : undefined }
-      });
-      return new MediaRecorder(stream);
-    } catch (error) {
-      console.error("Error accessing microphone:", error);
-      throw error;
-    }
-  };
-
-  const openMicrophone = async (mic, sock) => {
-    return new Promise((resolve) => {
-      mic.onstart = () => {
-        console.log("Microphone started");
-        resolve();
-      };
-
-      mic.onstop = () => {
-        console.log("Microphone stopped");
-      };
-
-      mic.ondataavailable = (event) => {
-        if (event.data.size > 0 && sock.readyState === WebSocket.OPEN) {
-          sock.send(event.data);
-        }
-      };
-
-      mic.start(1000);
-    });
-  };
-
-  const closeMicrophone = async (mic) => {
-    if (mic && mic.state !== "inactive") {
-      mic.stop();
-    }
-  };
-
-  const startMicrophone = async () => {
-    const wsUrl = api.defaults.baseURL.replace(/^http/, 'ws');
-    const newSocket = new WebSocket(`${wsUrl}`);
-    setSocket(newSocket);
-
-    newSocket.addEventListener("open", async () => {
-      console.log("WebSocket connection opened");
-      try {
-        const mic = await getMicrophone();
-        setMicrophone(mic);
-        await openMicrophone(mic, newSocket);
-        setIsMicrophoneActive(true); // Set microphone active
-      } catch (error) {
-        console.error("Error opening microphone:", error);
-        setError("Failed to start recording. Please check your microphone permissions.");
-      }
-    });
-
-    newSocket.addEventListener("message", (event) => {
-      const transcript = event.data.toString('utf8');
-      if (transcript === "Voice Disabled") {
-        setIsMicrophoneActive(false);
-      } else {
-        setIsMicrophoneActive(true);
-        if (transcript !== "") {
-          setTranscription(transcript);
-        }
-      }
-    });
-
-    newSocket.addEventListener("close", () => {
-      console.log("WebSocket connection closed");
-      setIsMicrophoneActive(false); // Set microphone inactive
-    });
-  };
-
-  const stopMicrophone = async () => {
-    if (microphone) {
-      await closeMicrophone(microphone);
-      setMicrophone(null);
-    }
-    if (socket) {
-      socket.close();
-      setSocket(null);
-    }
-    setIsMicrophoneActive(false); // Set microphone inactive
   };
 
   const handleBeforeUnload = (event) => {
@@ -340,29 +256,6 @@ function App() {
     fetchDataWithRetry();
   }, []);
 
-  useEffect(() => {
-    if (!agentStarted) {
-      stopMicrophone();
-    }
-  }, [agentStarted]);
-
-  useEffect(() => {
-    const getInputDevices = async () => {
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const audioInputDevices = devices.filter(device => device.kind === 'audioinput');
-        setInputDevices(audioInputDevices);
-        if (audioInputDevices.length > 0) {
-          setSelectedInputDevice(audioInputDevices[0].deviceId);
-        }
-      } catch (error) {
-        console.error("Error fetching input devices:", error);
-      }
-    };
-
-    getInputDevices();
-  }, []);
-
   if (loading) {
     return <div className="spinner">Loading...</div>;
   }
@@ -382,16 +275,10 @@ function App() {
       <Actions
         agentStarted={agentStarted}
         toggleAgent={toggleAgent}
-        stopMicrophone={stopMicrophone}
-        isMicrophoneActive={isMicrophoneActive} // Pass the new state
         settings={settings}
         setSettings={setSettings}
-        inputDevices={inputDevices} // Pass input devices
-        selectedInputDevice={selectedInputDevice} // Pass selected input device
-        setSelectedInputDevice={setSelectedInputDevice} // Pass setter for selected input device
       />
       {error && <div className="error-message">{error}</div>}
-      <Transcription transcription={transcription} />
     </div>
   );
 }

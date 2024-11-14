@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { HTTPS_BACKEND_URL } from '../constants.js';
+import OpenAI from 'openai';
+
 const minepal_response_schema = {
     type: "object",
     properties: {
@@ -9,15 +10,23 @@ const minepal_response_schema = {
     required: ["chat_response", "execute_command"],
     additionalProperties: false
 };
+
+const MAX_RETRIES = 5;
+const REQUEST_TIMEOUT = 3000; // msec
+
 export class GPT {
     constructor(model_name) {
         this.model_name = model_name;
         console.log(`Using model: ${model_name}`);
+        this.openai_api_key = process.env.OPENAI_API_KEY;
+        this.openai = new OpenAI({
+            apiKey: this.openai_api_key
+        });
     }
 
     async sendRequest(turns, systemMessage, stop_seq='***', memSaving=false) {
         let messages = [{'role': 'system', 'content': systemMessage}].concat(turns);
-        let res = null;
+
         // console.log("=== BEGIN MESSAGES ===");
         // messages.forEach((msg, index) => {
         //     console.log(`Message ${index + 1}:`);
@@ -28,14 +37,9 @@ export class GPT {
         // console.log("=== END MESSAGES ===");
 
         try {
-            const requestBody = {
-                model_name: this.model_name,
-                messages: messages,
-                stop_seq: stop_seq,
-            };
-
+            let response_format = null;
             if (!memSaving) {
-                requestBody.response_format = {
+                response_format = {
                     type: "json_schema",
                     json_schema: {
                         name: "minepal_response",
@@ -45,27 +49,61 @@ export class GPT {
                 };
             }
 
-            const response = await axios.post(`${HTTPS_BACKEND_URL}/openai/chat`, requestBody);
-            res = response.data;
+            let attempt = 0;    
+            while (attempt < MAX_RETRIES) {
+                try {
+                    let response = await axios.post('https://api.openai.com/v1/chat/completions', {
+                        model: this.model_name || "gpt-4o-mini",
+                        messages,
+                        stop: stop_seq,
+                        response_format,
+                    }, {
+                        headers: {
+                            'Authorization': `Bearer ${this.openai_api_key}`,
+                            'Content-Type': 'application/json'
+                        },
+                        timeout: REQUEST_TIMEOUT
+                    });
+                    console.log(response);
+
+                    if (memSaving) {
+                        return response.data.choices[0].message.content;
+                    } else {
+                        return JSON.parse(response.data.choices[0].message.content);
+                    }
+                } catch (err) {
+                    console.error("Request failed:", err);
+                    attempt++;
+                    if (attempt >= MAX_RETRIES) {
+                        return "Connection to OpenAI service timed out.";
+                    }
+                }
+            }
+
+            return null;
         } catch (err) {
             console.error("Request failed:", err);
-            res = "My brain disconnected.";
+            let res = "My brain disconnected.";
             // if ((err.message.includes('Context length exceeded') || err.response?.status === 500) && turns.length > 1) {
             //     return await this.sendRequest(turns.slice(1), systemMessage, stop_seq, memSaving);
             // } else {
             //     res = 'My brain disconnected, try again.';
             // }
+            return res;
         }
-        return res;
     }
 
     async embed(text) {
+        let model_name = this.model_name || "text-embedding-3-small";
+
         try {
-            const response = await axios.post(`${HTTPS_BACKEND_URL}/openai/embed`, {
-                model_name: this.model_name,
-                text: text,
+            const embedding = await this.openai.embeddings.create({
+                model: model_name,
+                input: text,
+                encoding_format: "float",
             });
-            return response.data;
+
+            return embedding.data[0].embedding;
         } catch (err) {
             console.log(err);
             throw new Error('Failed to get embedding');

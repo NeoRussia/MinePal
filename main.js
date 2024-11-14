@@ -47,7 +47,7 @@ async function checkAndCopyProfile() {
 function createWindow() {
     mainWindow = new BrowserWindow({
         width: 650,
-        height: 800,
+        height: 960,
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
@@ -86,17 +86,6 @@ if (!gotTheLock) {
 
   app.on('ready', async () => {
     createWindow(); // Create the window first
-    logToFile(`Platform: ${process.platform}`);
-    if (process.platform === 'darwin') { // Check if the platform is macOS
-        try {
-            const micAccess = await systemPreferences.askForMediaAccess('microphone');
-            if (micAccess) {
-                logToFile("Microphone access granted");
-            }
-        } catch (error) {
-            logToFile("Failed to request microphone access: " + error);
-        }
-    }
     try {
         startServer();
     } catch (error) {

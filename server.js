@@ -2,64 +2,21 @@ import { AgentProcess } from './src/process/agent-process.js';
 import { app as electronApp } from 'electron';
 import express from 'express';
 import http from 'http';
-import { WebSocketServer, WebSocket } from 'ws';
-import { HTTPS_BACKEND_URL, WSS_BACKEND_URL } from './src/constants.js';
 import fs from 'fs';
 import cors from 'cors';
 import path from 'path';
 import net from 'net';
-import { GlobalKeyboardListener } from 'node-global-key-listener';
+
 
 const logFile = path.join(electronApp.getPath('userData'), 'app.log');
 const logStream = fs.createWriteStream(logFile, { flags: 'a' });
-
-let wss; // Declare wss in the outer scope
-let isToggleToTalkActive = false; // Global state for toggle_to_talk
-let isKeyDown = false; // Track key state
-let gkl; // Declare the global keyboard listener
-let voice_mode = 'off'; // Global voice_mode variable with default value
 
 function logToFile(message) {
     logStream.write(`${new Date().toISOString()} - ${message}\n`);
 }
 
-function broadcastMessage(message) {
-    wss.clients.forEach(client => {
-        if (client.readyState === WebSocket.OPEN) {
-            client.send(message);
-        }
-    });
-}
-
 function notifyBotKicked() {
     logToFile("Bot was kicked");
-    broadcastMessage("Error: Bot kicked.");
-}
-
-function setupVoice(settings) {
-    voice_mode = settings.voice_mode; // Assign voice_mode from settings
-    const { key_binding } = settings;
-
-    if ((voice_mode === 'push_to_talk' || voice_mode === 'toggle_to_talk') && key_binding) {
-        gkl = new GlobalKeyboardListener();
-
-        gkl.addListener((e) => {
-            if (e.name.toLowerCase() === key_binding.toLowerCase()) {
-                if (e.state === 'DOWN') {
-                    if (voice_mode === 'push_to_talk') {
-                        isKeyDown = true;
-                        console.log('Push-to-talk key down:', isKeyDown);
-                    } else if (voice_mode === 'toggle_to_talk') {
-                        isToggleToTalkActive = !isToggleToTalkActive;
-                        console.log('Toggle-to-talk active:', isToggleToTalkActive);
-                    }
-                } else if (e.state === 'UP' && voice_mode === 'push_to_talk') {
-                    isKeyDown = false;
-                    console.log('Push-to-talk key up:', isKeyDown);
-                }
-            }
-        });
-    }
 }
 
 function startServer() {
@@ -86,9 +43,8 @@ function startServer() {
             "allow_insecure_coding": false,
             "code_timeout_mins": 10,
             "whisper_to_player": false,
-            "voice_mode": "always_on",
-            "key_binding": "",
-            "language": "en"
+            "language": "en",
+            "openai_api_key": "",
         };
         fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 4));
     } else {
@@ -99,11 +55,11 @@ function startServer() {
     let load_memory = settings.load_memory;
     let agentProcessStarted = false;
     let agentProcesses = [];
+    let openai_api_key = "";
 
     const app = express();
     const port = 10101;
     const server = http.createServer(app);
-    wss = new WebSocketServer({ server }); // Initialize wss within startServer
 
     // Configure CORS to allow credentials
     app.use(cors({
@@ -115,92 +71,6 @@ function startServer() {
     app.use((req, res, next) => {
         // logToFile(`Incoming request: ${req.method} ${req.url}`);
         next();
-    });
-
-    let transcriptBuffer = "";
-
-    function broadcastMessage(message) {
-        wss.clients.forEach(client => {
-            if (client.readyState === WebSocket.OPEN) {
-                client.send(message);
-            }
-        });
-    }
-
-    wss.on("connection", (ws) => {
-        logToFile("socket: client connected");
-        const proxyWs = new WebSocket(`${WSS_BACKEND_URL}?language=${settings.language}`);
-        
-        // Update settings
-        settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-        voice_mode = settings.voice_mode;
-        setupVoice(settings);
-
-        proxyWs.on('open', () => {
-            logToFile(`proxy: connected to ${WSS_BACKEND_URL}`);
-        });
-
-        proxyWs.on('message', (message) => {
-            // console.log(`Voice Mode: ${settings.voice_mode}, isKeyDown: ${isKeyDown}, isToggleToTalkActive: ${isToggleToTalkActive}`);
-            if (voice_mode === 'always_on' || 
-                (voice_mode === 'push_to_talk' && isKeyDown) || 
-                (voice_mode === 'toggle_to_talk' && isToggleToTalkActive)) {
-
-                const parsedMessage = JSON.parse(message.toString('utf8'));
-                const { is_final, speech_final, transcript } = parsedMessage;
-
-                if (is_final) {
-                    transcriptBuffer += transcript;
-                }
-
-                if (speech_final) {
-                    ws.send(transcriptBuffer); // to frontend
-                    agentProcesses.forEach(agentProcess => {
-                        agentProcess.sendTranscription(transcriptBuffer);
-                    });
-                    transcriptBuffer = "";
-                }
-            } else {
-                ws.send("Voice Disabled");
-            }
-        });
-
-        proxyWs.on('close', () => {
-            logToFile(`proxy: connection to ${WSS_BACKEND_URL} closed`);
-            ws.close();
-        });
-
-        proxyWs.on('error', (error) => {
-            logToFile(`proxy: error ${error}`);
-            ws.close();
-        });
-
-        ws.on("message", (message) => {
-            if (proxyWs.readyState === WebSocket.OPEN) {
-                proxyWs.send(message);
-            } else {
-                logToFile("socket: data couldn't be sent to proxy");
-            }
-        });
-
-        ws.on("close", () => {
-            logToFile("socket: client disconnected");
-            proxyWs.close();
-        });
-    });
-
-    app.get('/backend-alive', async (req, res) => {
-        try {
-            const response = await fetch(`${HTTPS_BACKEND_URL}/ping`);
-            if (response.ok && await response.text() === 'pong') {
-                res.json({ backend_alive: true });
-            } else {
-                res.json({ backend_alive: false });
-            }
-        } catch (error) {
-            logToFile(`Heartbeat error: ${error.message}`);
-            res.json({ backend_alive: false });
-        }
     });
 
     app.get('/settings', (req, res) => {
@@ -314,11 +184,10 @@ function startServer() {
         }
 
         const newSettings = req.body;
-        // Check for empty fields in newSettings, except for key_binding if voice_mode is always_on or off
+        // Check for empty fields in newSettings
         const emptyFields = Object.entries(newSettings)
             .filter(([key, value]) => {
                 if (key === 'profiles') return !Array.isArray(value) || value.length === 0;
-                if (key === 'key_binding' && (newSettings.voice_mode === 'always_on' || newSettings.voice_mode === 'off')) return false;
                 return value === "" || value === null || value === undefined;
             })
             .map(([key]) => key);
@@ -340,11 +209,12 @@ function startServer() {
         fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 4));
         profiles = newSettings.profiles;
         load_memory = newSettings.load_memory;
+        openai_api_key = newSettings.openai_api_key;
 
         for (let profile of profiles) {
             const profileBotName = profile.name;
             const agentProcess = new AgentProcess(notifyBotKicked);
-            agentProcess.start(profileBotName, userDataDir, load_memory);
+            agentProcess.start(profileBotName, userDataDir, openai_api_key, load_memory);
             agentProcesses.push(agentProcess);
         }
         agentProcessStarted = true;
@@ -398,8 +268,8 @@ function startServer() {
     process.on('SIGINT', shutdown);
     process.on('SIGTERM', shutdown);
 
-    server.listen(port, '0.0.0.0', () => {
-        logToFile(`Server running at http://0.0.0.0:${port}`);
+    server.listen(port, '127.0.0.1', () => {
+        logToFile(`Server running at http://127.0.0.1:${port}`);
     });
 
     logToFile("Server started successfully.");

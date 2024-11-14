@@ -15,9 +15,9 @@ function wrapExecution(func, timeout = -1, resume_name = null) {
       code_return = await agent.coder.execute(async () => {
         await func(agent, ...args);
       }, timeout);
-    if (agent.followPlayerName) {
-      await skills.followPlayer(agent.bot, agent.followPlayerName);
-    }
+      if (agent.followPlayerName) {
+        await skills.followPlayer(agent.bot, agent.followPlayerName);
+      }
     }
     if (code_return.interrupted && !code_return.timedout) return;
     return code_return.message;
