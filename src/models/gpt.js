@@ -64,7 +64,7 @@ export class GPT {
                         },
                         timeout: REQUEST_TIMEOUT
                     });
-                    console.log(response);
+                    // console.log(response);
 
                     if (memSaving) {
                         return response.data.choices[0].message.content;
