@@ -1,18 +1,25 @@
 import axios from 'axios';
 import OpenAI from 'openai';
 
-const minepal_response_schema = {
-    type: "object",
-    properties: {
-        chat_response: { type: "string" },
-        execute_command: { type: "string" }
-    },
-    required: ["chat_response", "execute_command"],
-    additionalProperties: false
+const MINEPAL_RESPONSE_FORMAT = {
+    type: "json_schema",
+    json_schema: {
+        name: "minepal_response",
+        schema: {
+            type: "object",
+            properties: {
+                chat_response: { type: "string" },
+                execute_command: { type: "string" }
+            },
+            required: ["chat_response", "execute_command"],
+            additionalProperties: false
+        },
+        strict: true
+    }
 };
 
-const MAX_RETRIES = 5;
-const REQUEST_TIMEOUT = 3000; // msec
+const MAX_RETRIES = 0;
+// const REQUEST_TIMEOUT = 3000; // msec
 
 export class GPT {
     constructor(model_name) {
@@ -36,61 +43,49 @@ export class GPT {
         // });
         // console.log("=== END MESSAGES ===");
 
-        try {
-            let response_format = null;
-            if (!memSaving) {
-                response_format = {
-                    type: "json_schema",
-                    json_schema: {
-                        name: "minepal_response",
-                        schema: minepal_response_schema,
-                        strict: true
-                    }
-                };
-            }
-
-            let attempt = 0;    
-            while (attempt < MAX_RETRIES) {
-                try {
-                    let response = await axios.post('https://api.openai.com/v1/chat/completions', {
-                        model: this.model_name || "gpt-4o-mini",
-                        messages,
-                        stop: stop_seq,
-                        response_format,
-                    }, {
-                        headers: {
-                            'Authorization': `Bearer ${this.openai_api_key}`,
-                            'Content-Type': 'application/json'
-                        },
-                        timeout: REQUEST_TIMEOUT
-                    });
-                    // console.log(response);
-
+        let attempt = 0;    
+        while (attempt <= MAX_RETRIES) {
+            try {
+                if (memSaving) {
+                    return await this._sendStringRequest(messages, stop_seq);
+                } else {
+                    return await this._sendJsonRequest(messages, stop_seq);
+                }
+            } catch (err) {
+                console.error("Request failed:", err);
+                // console.error("Request failed");
+                attempt++;
+                if (attempt > MAX_RETRIES) {
+                    let res = "My brain disconnected, try again.";
                     if (memSaving) {
-                        return response.data.choices[0].message.content;
+                        return res;
                     } else {
-                        return JSON.parse(response.data.choices[0].message.content);
-                    }
-                } catch (err) {
-                    console.error("Request failed:", err);
-                    attempt++;
-                    if (attempt >= MAX_RETRIES) {
-                        return "Connection to OpenAI service timed out.";
+                        return { chat_response: res };
                     }
                 }
             }
-
-            return null;
-        } catch (err) {
-            console.error("Request failed:", err);
-            let res = "My brain disconnected.";
-            // if ((err.message.includes('Context length exceeded') || err.response?.status === 500) && turns.length > 1) {
-            //     return await this.sendRequest(turns.slice(1), systemMessage, stop_seq, memSaving);
-            // } else {
-            //     res = 'My brain disconnected, try again.';
-            // }
-            return res;
         }
+
+        return null;
+    }
+
+    async _sendJsonRequest(messages, stop_seq) {
+        let completion = await this.openai.chat.completions.create({
+            model: this.model_name || "gpt-4o-mini",
+            messages: messages,
+            stop: stop_seq,
+            response_format: MINEPAL_RESPONSE_FORMAT
+        });
+        return JSON.parse(completion.choices[0].message.content); 
+    }
+
+    async _sendStringRequest(messages, stop_seq) {
+        let completion = await this.openai.chat.completions.create({
+            model: this.model_name || "gpt-4o-mini",
+            messages: messages,
+            stop: stop_seq
+        });
+        return completion.choices[0].message.content;
     }
 
     async embed(text) {
