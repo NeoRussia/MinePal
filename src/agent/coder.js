@@ -122,7 +122,7 @@ export class Coder {
                 if (res.indexOf('!newAction') !== -1) {
                     messages.push({
                         role: 'assistant', 
-                        content: res.substring(0, res.indexOf('!newAction'))
+                        content: res.substring(0, res.indexOf('!newAction').trim())
                     });
                     continue; // using newaction will continue the loop
                 }
@@ -138,7 +138,7 @@ export class Coder {
                 }
                 messages.push({
                     role: 'system', 
-                    content: 'Error: no code provided. Write code in codeblock in your response. ``` // example ```'}
+                    content: 'Error: no code provided. Write code in codeblock in your response. ``` // example ```'.trim()}
                 );
                 failures++;
                 continue;
@@ -160,11 +160,11 @@ export class Coder {
 
             messages.push({
                 role: 'assistant',
-                content: res
+                content: res.trim()
             });
             messages.push({
                 role: 'system',
-                content: code_return.message
+                content: code_return.message.trim()
             });
         }
         return {success: false, message: null, interrupted: false, timedout: true};
@@ -250,6 +250,7 @@ export class Coder {
         if (!this.executing) return;
         this.agent.bot.interrupt_code = true;
         this.agent.bot.collectBlock.cancelTask();
+        await this.agent.bot.fish.cancelTask();
         this.agent.bot.pathfinder.stop();
         this.agent.bot.pvp.stop();
         console.log('waiting for code to finish executing...');

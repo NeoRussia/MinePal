@@ -66,7 +66,7 @@ export class History {
             role = 'user';
             content = `${name}: ${content}`;
         }
-        this.turns.push({role, content});
+        this.turns.push({role, content: content.trim()});
 
         // Summarize older turns into memory
         if (this.turns.length >= this.max_messages) {

@@ -1,5 +1,6 @@
 const { Vec3 } = require('vec3')
 const { createDoneTask, createTask } = require('../promise_utils')
+const { finished } = require('stream')
 
 module.exports = inject
 
@@ -32,6 +33,7 @@ function inject (bot) {
       fishingTask.finish()
     }
   })
+
   bot._client.on('entity_destroy', (packet) => {
     if (!lastBobber) return
     if (packet.entityIds.some(id => id === lastBobber.id)) {
@@ -52,5 +54,14 @@ function inject (bot) {
     await fishingTask.promise
   }
 
+  async function cancelTask() {
+    if (!lastBobber || fishingTask.done) return
+    bot.activateItem()
+    lastBobber = undefined
+    fishingTask.finish()
+    // fishingTask.cancel(new Error('Fishing cancelled'))
+  }
+
   bot.fish = fish
+  bot.fish.cancelTask = cancelTask
 }

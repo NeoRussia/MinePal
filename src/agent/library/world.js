@@ -63,19 +63,20 @@ export function getNearestBlocks(bot, block_types=null, distance=64, count=10000
         }
     }
 
-    let positions = bot.findBlocks({matching: block_ids, maxDistance: distance, count: count});
+    let positions = bot.findBlocks({matching: block_ids, maxDistance: distance, count: 10000});
     let blocks = [];
     for (let i = 0; i < positions.length; i++) {
         let block = bot.blockAt(positions[i]);
-        let distance = positions[i].distanceTo(bot.entity.position);
         if (['chest', 'trapped_chest', 'furnace', 'wheat', 'carrots', 'potatoes', 'beetroots', 'melon', 'pumpkin'].includes(block.name) || bot.canSeeBlock(block)) {
+            let distance = positions[i].distanceTo(bot.entity.position);
             blocks.push({ block: block, distance: distance });
         }
     }
     blocks.sort((a, b) => a.distance - b.distance);
+    count = Math.min(count, blocks.length);
 
     let res = [];
-    for (let i = 0; i < blocks.length; i++) {
+    for (let i = 0; i < count; i++) {
         res.push(blocks[i].block);
     }
     return res;
@@ -97,6 +98,93 @@ export function getNearestBlock(bot, block_type, distance=16) {
         return blocks[0];
     }
     return null;
+}
+
+
+export async function getNearAccessibleBlocks(bot, block_types=null, search_distance=16, access_distance=1, count=1000) {
+    /**
+     * Get a list of near accessible blocks of the given types. "Accessible" means blocks that the bot can reach without digging or placing blocks. Note that they are not necessarily the closest blocks.
+     * @param {Bot} bot - The bot to get near blocks for.
+     * @param {string[]} block_types - The names of the blocks to search for.
+     * @param {number} search_distance - The maximum distance to search, default 16.
+     * @param {number} access_distance - The distance to access, default 1.
+     * @param {number} count - The maximum number of blocks to find, default 1000.
+     * @returns {Block[]} - Near blocks of the given type.
+     * @example
+     * let nearChests = world.getNearAccessibleBlocks(bot, ['chest'], 16, 1, 3);
+     * let nearWaters = world.getNearAccessibleBlocks(bot, ['water'], 16, 0, 1);
+     **/
+    // if blocktypes is not a list, make it a list
+    let block_ids = [];
+    if (block_types === null) {
+        block_ids = MCData.getInstance().getAllBlockIds(['air']);
+    }
+    else {
+        if (!Array.isArray(block_types))
+            block_types = [block_types];
+        for(let block_type of block_types) {
+            block_ids.push(MCData.getInstance().getBlockId(block_type));
+        }
+    }
+
+    let positions = bot.findBlocks({matching: block_ids, maxDistance: search_distance, count: 1000});
+
+    // Sort blocks by their distance from the bot
+    let blocks = [];
+    for (let i = 0; i < positions.length; i++) {
+        let position = positions[i].offset(0.5, 0.5, 0.5);
+        let block = bot.blockAt(position);
+        let distance = position.distanceTo(bot.entity.position);
+        blocks.push({ block: block, distance: distance });
+    }
+    blocks.sort((a, b) => a.distance - b.distance);
+
+    // Filter blocks to those reachable by the bot without digging or placing, sorted by path length.
+    // To reduce computational cost, stop searching after finding the specified number of blocks.
+    let near_blocks = [];
+    let found = 0;
+    for (let i = 0; i < blocks.length; i++) {
+        let block = blocks[i].block;
+
+        let movements = new pf.Movements(bot)
+        movements.canDig = false;
+        movements.canPlaceOn = false;
+        let blockPos = block.position.offset(0.5, 0.5, 0.5);
+        let goal = new pf.goals.GoalNear(blockPos.x, blockPos.y, blockPos.z, access_distance);
+        let path = await bot.pathfinder.getPathTo(movements, goal, 100);
+
+        if (path.status === 'success') {
+            near_blocks.push({ block: block, distance: path.length });
+            found++;
+            if (found >= count) break;
+        }
+    }
+    near_blocks.sort((a, b) => a.distance - b.distance);
+
+    let res = [];
+    for (let i = 0; i < near_blocks.length; i++) {
+        res.push(near_blocks[i].block);
+    }
+
+    return res;
+}
+
+export async function getNearAccessibleBlock(bot, block_type, search_distance=16, access_distance=1) {
+    /**
+    * Get the near accessible block of the given type. "Accessible" means blocks that the bot can reach without digging or placing blocks. Note that they are not necessarily the closest blocks.
+    * @param {Bot} bot - The bot to get the near block for.
+    * @param {string} block_type - The name of the block to search for.
+    * @param {number} search_distance - The maximum distance to search, default 16.
+    * @param {number} access_distance - The distance to access, default 1.
+    * @returns {Block} - The near accessible block of the given type.
+    * @example
+    * let nearWater = world.getNearAccessibleBlock(bot, 'water', 16, 0);
+    **/
+   let blocks = await getNearAccessibleBlocks(bot, block_type, search_distance, access_distance, 1);
+   if (blocks.length > 0) {
+       return blocks[0];
+   }
+   return null;
 }
 
 
@@ -250,12 +338,23 @@ export async function isClearPath(bot, target) {
      * @param {Entity} target - The target to path to.
      * @returns {boolean} - True if there is a clear path, false otherwise.
      */
+    let path = await getClearPath(bot, target);
+    return path.status === 'success';
+}
+
+export async function getClearPath(bot, target) {
+    /**
+     * Get a path to the target that requires no digging or placing blocks.
+     * @param {Bot} bot - The bot to get the path for.
+     * @param {Entity} target - The target to path to.
+     * @returns {boolean} - A path to the target
+     */
     let movements = new pf.Movements(bot)
     movements.canDig = false;
     movements.canPlaceOn = false;
     let goal = new pf.goals.GoalNear(target.position.x, target.position.y, target.position.z, 1);
     let path = await bot.pathfinder.getPathTo(movements, goal, 100);
-    return path.status === 'success';
+    return path;
 }
 
 export function shouldPlaceTorch(bot) {

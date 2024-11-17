@@ -23,7 +23,7 @@ export function toSinglePrompt(turns, system=null, stop_seq='***', model_nicknam
     });
     if (role !== model_nickname) // if the last message was from the user/system, add a prompt for the model. otherwise, pretend we are extending the model's own message
         prompt += model_nickname + ": ";
-    return prompt;
+    return prompt.trim();
 }
 
 // ensures stricter turn order for anthropic/llama models
@@ -33,6 +33,7 @@ export function strictFormat(turns) {
     let messages = [];
     let filler = {role: 'user', content: '_'};
     for (let msg of turns) {
+        msg.content = msg.content.trim();
         if (msg.role === 'system') {
             msg.role = 'user';
             msg.content = 'SYSTEM: ' + msg.content;
@@ -50,13 +51,15 @@ export function strictFormat(turns) {
             messages.push(msg);
         }
         prev_role = msg.role;
-        
     }
     if (messages.length > 0 && messages[0].role !== 'user') {
         messages.unshift(filler); // anthropic requires user message to start
     }
     if (messages.length === 0) {
         messages.push(filler);
+    }
+    for (let msg of messages) {
+        msg.content = msg.content.trim();
     }
     return messages;
 }

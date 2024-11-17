@@ -144,9 +144,35 @@ const modes = [
         }
     },
     {
+        name: 'fishing',
+        description: 'Do fishing when idle.',
+        interrupts: [],
+        on: false,
+        active: false,
+        /**
+         * Update function for fishing mode.
+         * @param {Object} agent - The agent object containing the bot.
+         */
+        update: async function (agent) {
+            let fishing_rod = agent.bot.inventory.items().find((item) => item.name === "fishing_rod");
+            if (fishing_rod) {
+                execute(this, agent, async () => {
+                    let success = await skills.fishing(agent.bot);
+                    if (!success) {
+                        agent.bot.modes.setOn("fishing", false);
+                    }
+                    return success;
+                });
+            } else {
+                await agent.sendMessage("No fishing rod.");
+                agent.bot.modes.setOn("fishing", false);
+            }
+        }
+    },
+    {
         name: 'item_collecting',
         description: 'Collect nearby items when idle.',
-        interrupts: ['followPlayer'],
+        interrupts: ['followPlayer', 'fishing'],
         on: true,
         active: false,
 

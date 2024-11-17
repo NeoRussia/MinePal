@@ -33,6 +33,7 @@ export const actionsList = [
       console.log("[CODERSTOP] Stop command.");
       await agent.coder.stop();
       agent.followPlayerName = null;
+      agent.bot.modes.setOn("fishing", false);
       agent.coder.clear();
       agent.coder.cancelResume();
       agent.bot.emit("idle");
@@ -426,6 +427,45 @@ export const actionsList = [
     perform: wrapExecution(async (agent, house_type) => {
       return await skills.buildHouse(agent.bot, house_type);
     }),
+  },
+  {
+    name: "!fishing",
+    description: "Hold a fishing rod in your hand and go fishing.",
+    perform: wrapExecution(
+      async (agent) => {
+        let fishing_rod = agent.bot.inventory.items().find((item) => item.name === "fishing_rod");
+        if (!fishing_rod) {
+          skills.log(agent.bot, "No fishing rod.");
+          return "No fishing rod.";
+        }
+
+        let success = await skills.goToWater(agent.bot);
+        if (!success) {
+          return "Could not find any water nearby.";
+        }
+
+        agent.followPlayerName = null;
+
+        agent.bot.modes.setOn("fishing", true);
+        return true;
+      }, -1, "fishing"),
+  },
+  {
+    name: "!stopFishing",
+    description: "Make the agent stop fishing.",
+    perform: async (agent) => {
+      if (agent.bot.modes.isOn("fishing")) {
+        console.log("[CODERSTOP] Stop command.");
+        await agent.coder.stop();
+        agent.followPlayerName = null;
+        agent.bot.modes.setOn("fishing", false);
+        agent.coder.clear();
+        agent.coder.cancelResume();
+        agent.bot.emit("idle");
+        return "Agent stopped.";
+      }
+      else true;
+    },
   }
   // {
   //   name: "!goal",

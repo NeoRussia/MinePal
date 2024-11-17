@@ -132,7 +132,7 @@ export class Prompter {
         let prompt = this.profile.conversing;
         prompt = await this.replaceStrings(prompt, messages, this.convo_examples);
         let chat_response, execute_command;
-        ({ chat_response, execute_command } = await this.chat_model.sendRequest(messages, prompt));
+        ({ chat_response, execute_command } = await this.chat_model.sendRequest(messages, prompt) || {});
         console.log('Chat Response:', chat_response);
         console.log('Execute Command:', execute_command);
         
