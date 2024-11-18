@@ -443,7 +443,7 @@ export const actionsList = [
         }
 
         // cancel the execution of followPlayer
-        await agent.coder.stop();
+        agent.bot.pathfinder.stop();
         agent.followPlayerName = null;
         agent.coder.clear();
         agent.coder.cancelResume();
