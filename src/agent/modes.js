@@ -172,7 +172,7 @@ const modes = [
     {
         name: 'item_collecting',
         description: 'Collect nearby items when idle.',
-        interrupts: ['followPlayer', 'fishing'],
+        interrupts: ['followPlayer'],
         on: true,
         active: false,
 

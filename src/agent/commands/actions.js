@@ -431,40 +431,40 @@ export const actionsList = [
   {
     name: "!fishing",
     description: "Hold a fishing rod in your hand and go fishing.",
-    perform: wrapExecution(
-      async (agent) => {
+    perform: async (agent) => {
+        // if (agent.bot.modes.isOn("fishing")) {
+        //   return "Fishing is already on my mind.";
+        // }
+
         let fishing_rod = agent.bot.inventory.items().find((item) => item.name === "fishing_rod");
         if (!fishing_rod) {
           skills.log(agent.bot, "No fishing rod.");
           return "No fishing rod.";
         }
 
-        let success = await skills.goToWater(agent.bot);
-        if (!success) {
-          return "Could not find any water nearby.";
-        }
-
+        // cancel the execution of followPlayer
+        await agent.coder.stop();
         agent.followPlayerName = null;
-
+        agent.coder.clear();
+        agent.coder.cancelResume();
+    
         agent.bot.modes.setOn("fishing", true);
-        return true;
-      }, -1, "fishing"),
+        
+        agent.bot.emit("idle");
+        return "Fishing has come to mind.";
+      },
   },
   {
     name: "!stopFishing",
     description: "Make the agent stop fishing.",
     perform: async (agent) => {
       if (agent.bot.modes.isOn("fishing")) {
-        console.log("[CODERSTOP] Stop command.");
-        await agent.coder.stop();
-        agent.followPlayerName = null;
         agent.bot.modes.setOn("fishing", false);
-        agent.coder.clear();
-        agent.coder.cancelResume();
-        agent.bot.emit("idle");
-        return "Agent stopped.";
+        agent.bot.fish.cancelTask();
+        return "Fishing stopped.";
+      } else{
+        return "Fishing is not in progress.";
       }
-      else true;
     },
   }
   // {

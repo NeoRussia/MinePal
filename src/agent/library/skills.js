@@ -1562,7 +1562,7 @@ export async function goToWater(bot) {
    * @param {MinecraftBot} bot, reference to the minecraft bot.
    * @returns {Promise<boolean>} true if moved successfully, false otherwise.
    */
-  let nearWater = await world.getNearAccessibleBlock(bot, "water", 16, 0);
+  let nearWater = await world.getNearAccessibleBlock(bot, "water", MID_DISTANCE, 0);
   if (!nearWater) {
     log(bot, "Could not find any water nearby.");
     return false;
@@ -1580,7 +1580,7 @@ export async function goToWater(bot) {
 
 export async function fishing(bot) {
   /**
-   * Move to the near water block and fish endlessly.
+   * Move to the near water block and fish.
    * @param {MinecraftBot} bot, reference to the minecraft bot.
    * @returns {Promise<boolean>} true if fishing starts successfully, false otherwise.
    */
@@ -1590,7 +1590,7 @@ export async function fishing(bot) {
     return false;
   }
 
-  let nearWater = await world.getNearAccessibleBlock(bot, "water", NEAR_DISTANCE, 0);
+  let nearWater = await world.getNearAccessibleBlock(bot, "water", MID_DISTANCE, 0);
   if (!nearWater) {
     log(bot, "Could not find any water nearby.");
     return false;
@@ -1600,15 +1600,22 @@ export async function fishing(bot) {
   bot.modes.pause("hunting");
   bot.modes.pause("torch_placing");
 
-  if (bot.entity.position.distanceTo(nearWater.position) > 2) {
-    log(bot, "Could not find any water nearby.");
-    return false;
+  let waterPos = nearWater.position.offset(0.5, 0.5, 0.5);
+  if (bot.entity.position.distanceTo(waterPos) > 2) {
+    let movements = new pf.Movements(bot);
+    bot.pathfinder.setMovements(movements);
+    await bot.pathfinder.goto(new pf.goals.GoalNear(waterPos.x, waterPos.y, waterPos.z, 2));
   }
 
   await bot.equip(fishing_rod, "hand");
-  await bot.lookAt(nearWater.position.offset(0.5, 0.5, 0.5));
+  await bot.lookAt(waterPos);
   await new Promise((resolve) => setTimeout(resolve, 2000));
-  await bot.fish();
+  try {
+    await bot.fish();
+  } catch (err) {
+    log(bot, `Could not start fishing. ${err}`)
+    return false;
+  }
 
   return true;
 }
