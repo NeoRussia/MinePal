@@ -54,7 +54,7 @@ function inject (bot) {
     await fishingTask.promise
   }
 
-  async function cancelTask() {
+  function cancelTask() {
     if (!lastBobber || fishingTask.done) return
     bot.activateItem()
     lastBobber = undefined

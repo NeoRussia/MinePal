@@ -123,6 +123,14 @@ export class AgentProcess {
                 agentLogStream.end();
             }
         });
+
+        this.agentProcess.on("uncaughtException", (err) => {
+            logToFile(`Uncaught Exception: ${err}`);
+        });
+
+        this.agentProcess.on("unhandledRejection", (reason, promise) => {
+            logToFile(`Unhandled Rejection at:${promise}, reason:${reason}`);
+        });
     }
 
     /**

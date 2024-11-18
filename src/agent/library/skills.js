@@ -566,7 +566,7 @@ export async function collectBlock(
     potato: 7,
   };
 
-  await stopFishing(bot);
+  stopFishing(bot);
 
   while (collected < num && retries < 3) {
     console.log(
@@ -1093,7 +1093,7 @@ export async function giveToPlayer(bot, username, items) {
     log(bot, `Could not find ${username}.`);
     return false;
   }
-  await stopFishing(bot);
+  stopFishing(bot);
   await goToPlayer(bot, username);
   await bot.lookAt(player.position);
   for (const { name, quantity } of itemsList) {
@@ -1119,7 +1119,7 @@ export async function goToPosition(bot, x, y, z, min_distance = 2) {
     log(bot, `Missing coordinates, given x:${x} y:${y} z:${z}`);
     return false;
   }
-  await stopFishing(bot);
+  stopFishing(bot);
   if (bot.modes.isOn("cheat")) {
     bot.chat("/tp @s " + x + " " + y + " " + z);
     log(bot, `Teleported to ${x}, ${y}, ${z}.`);
@@ -1159,7 +1159,7 @@ export async function goToPlayer(bot, username, distance = 1) {
     return false;
   }
 
-  await stopFishing(bot);
+  stopFishing(bot);
   const move = new pf.Movements(bot);
   bot.pathfinder.setMovements(move);
   await bot.pathfinder.goto(new pf.goals.GoalFollow(player, distance), true);
@@ -1183,7 +1183,7 @@ export async function teleportToPlayer(bot, username) {
     player &&
     bot.entity.position.distanceTo(player.position) <= NEAR_DISTANCE
   ) {
-    await stopFishing(bot);
+    stopFishing(bot);
     log(bot, `Teleported to ${username}.`);
     return true;
   } else {
@@ -1204,7 +1204,7 @@ export async function followPlayer(bot, username, distance = 4) {
   let player = bot.players[username].entity;
   if (!player) return false;
 
-  await stopFishing(bot);
+  stopFishing(bot);
   const move = new pf.Movements(bot);
   bot.pathfinder.setMovements(move);
   bot.pathfinder.setGoal(new pf.goals.GoalFollow(player, distance), true);
@@ -1225,7 +1225,7 @@ export async function moveAway(bot, distance) {
    * @example
    * await skills.moveAway(bot, 8);
    **/
-  await stopFishing(bot);
+  stopFishing(bot);
 
   const pos = bot.entity.position;
   let goal = new pf.goals.GoalNear(pos.x, pos.y, pos.z, distance);
@@ -1613,17 +1613,15 @@ export async function fishing(bot) {
   return true;
 }
 
-export async function stopFishing(bot) {
+export function stopFishing(bot) {
   /**
    * Stop fishing.
    * @param {MinecraftBot} bot, reference to the minecraft bot.
-   * @returns {Promise<boolean>} true if fishing stops successfully, false otherwise.
    */
   if (bot.modes.isOn("fishing")) {
     bot.modes.setOn("fishing", false);
-    await bot.fish.cancelTask();
+    bot.fish.cancelTask();
   }
-  return true;
 }
 
 export async function useItemOnEntity(bot, entityName, itemName) {

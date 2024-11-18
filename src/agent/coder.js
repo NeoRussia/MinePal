@@ -250,7 +250,7 @@ export class Coder {
         if (!this.executing) return;
         this.agent.bot.interrupt_code = true;
         this.agent.bot.collectBlock.cancelTask();
-        await this.agent.bot.fish.cancelTask();
+        this.agent.bot.fish.cancelTask();
         this.agent.bot.pathfinder.stop();
         this.agent.bot.pvp.stop();
         console.log('waiting for code to finish executing...');
