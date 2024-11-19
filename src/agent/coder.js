@@ -24,11 +24,13 @@ export class Coder {
 
     set executing(value) {
         this._executing = value;
-        if (!value && this.executingQueue.length > 0) {
-            const { resolve, id, timeout } = this.executingQueue.shift();
-            console.log(`Resolving executingPromise with ID: ${id}`);
-            clearTimeout(timeout);
-            resolve();
+        if (!value) {
+            while (this.executingQueue.length > 0) {
+                const { resolve, id, timeout } = this.executingQueue.shift();
+                console.log(`Resolving executingPromise with ID: ${id}`);
+                clearTimeout(timeout);
+                resolve();
+            }
         }
     }
 

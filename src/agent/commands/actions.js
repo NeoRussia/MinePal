@@ -286,7 +286,6 @@ export const actionsList = [
       "Stay in the current location no matter what. Pauses all modes.",
     perform: wrapExecution(async (agent) => {
       agent.followPlayerName = null;
-      await agent.coder.stop();
       await skills.stay(agent.bot);
     }),
   },
@@ -431,7 +430,7 @@ export const actionsList = [
   {
     name: "!fishing",
     description: "Hold a fishing rod in your hand and go fishing.",
-    perform: async (agent) => {
+    perform: wrapExecution(async (agent) => {
         // if (agent.bot.modes.isOn("fishing")) {
         //   return "Fishing is already on my mind.";
         // }
@@ -442,17 +441,10 @@ export const actionsList = [
           return "No fishing rod.";
         }
 
-        // cancel the execution of followPlayer
-        agent.bot.pathfinder.stop();
         agent.followPlayerName = null;
-        agent.coder.clear();
-        agent.coder.cancelResume();
-    
         agent.bot.modes.setOn("fishing", true);
-        
-        agent.bot.emit("idle");
         return "Fishing has come to mind.";
-      },
+      }),
   },
   {
     name: "!stopFishing",
