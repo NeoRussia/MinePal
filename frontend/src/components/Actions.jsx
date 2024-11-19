@@ -14,7 +14,7 @@ function Actions({
   return (
     <div className="actions">
       <div className="language-settings">
-        <span htmlFor="language">Language/Accent:</span>
+        <span htmlFor="language">Language:</span>
         <select
           id="language"
           value={settings.language}
