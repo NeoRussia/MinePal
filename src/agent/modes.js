@@ -202,7 +202,7 @@ const modes = [
 
         wait: 3, // number of seconds to wait after noticing an item to pick it up
         min_wait: 3,
-        max_wait: 3.2 * 60,
+        max_wait: 6.4 * 60,
         wait_scale: 2, // Exponential Backoff scale
         noticed_at: -1,
         /**

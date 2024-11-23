@@ -1,7 +1,11 @@
 import * as skills from "../library/skills.js";
 
-function wrapExecution(func, timeout = -1, resume_name = null) {
+function wrapExecution(func, timeout=-1, resume_name=null, precondition=null) {
   return async function (agent, ...args) {
+    if (precondition !== null) {
+      if (!precondition(agent, ...args)) return;
+    }
+
     let code_return;
     if (resume_name != null) { // not used afaik
       code_return = await agent.coder.executeResume(
@@ -431,10 +435,6 @@ export const actionsList = [
     name: "!startFishing",
     description: "Make the agent start fishing.",
     perform: wrapExecution(async (agent) => {
-        if (agent.bot.modes.isOn("fishing")) {
-          return "Fishing is already on my mind.";
-        }
-
         let fishing_rod = agent.bot.inventory.items().find((item) => item.name === "fishing_rod");
         if (!fishing_rod) {
           skills.log(agent.bot, "No fishing rod.");
@@ -444,6 +444,11 @@ export const actionsList = [
         agent.followPlayerName = null;
         agent.bot.modes.setOn("fishing", true);
         return "Fishing has come to mind.";
+      }, 
+      -1, 
+      null, 
+      (agent) => {
+        return !agent.bot.modes.isOn("fishing");
       }),
   },
   {

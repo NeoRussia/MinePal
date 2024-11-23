@@ -181,25 +181,25 @@ export class Agent {
         for (let i = mainInventoryStart; i <= mainInventoryEnd; i++) {
             let item = this.bot.inventory.slots[i];
             if (item) {
-                newHUD.backpack.push(`${item.name}: ${item.count}`);
+                newHUD.backpack.push(`${item.count} ${item.name}`);
             }
         }
 
         for (let i = hotbarStart; i <= hotbarEnd; i++) {
             let item = this.bot.inventory.slots[i];
             if (item) {
-                newHUD.hotbar.push(`${item.name}: ${item.count}`);
+                newHUD.hotbar.push(`${item.count} ${item.name}`);
             }
         }
 
         if (!this.bot.supportFeature("doesntHaveOffHandSlot")) {
             let offHandItem = this.bot.inventory.slots[offHandSlot];
-            newHUD.offHand.push(offHandItem ? `${offHandItem.name}: ${offHandItem.count}` : "empty");
+            newHUD.offHand.push(offHandItem ? `${offHandItem.count} ${offHandItem.name}` : "empty");
         }
 
         for (const [slotName, slotIndex] of Object.entries(armorSlots)) {
             let item = this.bot.inventory.slots[slotIndex];
-            newHUD.armor.push(`${slotName}: ${item ? `${item.name}: ${item.count}` : "empty"}`);
+            newHUD.armor.push(`${slotName}: ${item ? `${item.count} ${item.name}` : "empty"}`);
         }
 
         // Initializing nearby blocks and entities
@@ -220,21 +220,21 @@ export class Agent {
             statsRes += "\n- Other Players: " + newHUD.otherPlayers.join(", ");
         }
 
-        let inventoryRes = "## INVENTORY";
-        inventoryRes += "\n- Backpack:" + (newHUD.backpack.length ? `\n  - ${newHUD.backpack.join("\n  - ")}` : " none");
-        inventoryRes += "\n- Hotbar:" + (newHUD.hotbar.length ? `\n  - ${newHUD.hotbar.join("\n  - ")}` : " none");
-        inventoryRes += "\n- Off Hand Slot:" + (newHUD.offHand.length ? `\n  - ${newHUD.offHand.join("\n  - ")}` : " none");
-        inventoryRes += "\n- Armor Slots:" + (newHUD.armor.length ? `\n  - ${newHUD.armor.join("\n  - ")}` : " none");
+        let inventoryRes = "## INVENTORY (All the items you have.)";
+        inventoryRes += "\n### Backpack" + (newHUD.backpack.length ? `\n- ${newHUD.backpack.join("\n- ")}` : "\nnone");
+        inventoryRes += "\n### Hotbar" + (newHUD.hotbar.length ? `\n- ${newHUD.hotbar.join("\n- ")}` : "\nnone");
+        inventoryRes += "\n### Off Hand Slot" + (newHUD.offHand.length ? `\n- ${newHUD.offHand.join("\n- ")}` : "\nnone");
+        inventoryRes += "\n### Armor Slots" + (newHUD.armor.length ? `\n- ${newHUD.armor.join("\n- ")}` : "\nnone");
 
         if (this.bot.game.gameMode === "creative") {
             inventoryRes += "\n(You have infinite items in creative mode)";
         }
 
         let blocksRes = "## NEARBY_BLOCKS";
-        blocksRes += newHUD.nearbyBlocks.length ? `\n- ${newHUD.nearbyBlocks.join("\n- ")}` : ": none";
+        blocksRes += newHUD.nearbyBlocks.length ? `\n- ${newHUD.nearbyBlocks.join("\n- ")}` : "\nnone";
 
         let entitiesRes = "## NEARBY_ENTITIES";
-        entitiesRes += newHUD.nearbyEntities.length ? `\n- mob: ${newHUD.nearbyEntities.join("\n- mob: ")}` : ": none";
+        entitiesRes += newHUD.nearbyEntities.length ? `\n- mob: ${newHUD.nearbyEntities.join("\n- mob: ")}` : "\nnone";
 
         // Return both newHUD and the HUD string
         return {
@@ -273,10 +273,10 @@ export class Agent {
                     const newItems = newList.filter(item => !oldList.includes(item));
 
                     if (goneItems.length > 0) {
-                        diffText += `\n  * GONE: ${field} - ${goneItems.join(', ')}\n`;
+                        diffText += `  * GONE: ${field} - ${goneItems.join(', ')}\n`;
                     }
                     if (newItems.length > 0) {
-                        diffText += `\n  * NEW: ${field} - ${newItems.join(', ')}\n`;
+                        diffText += `  * NEW: ${field} - ${newItems.join(', ')}\n`;
                     }
                 });
 
