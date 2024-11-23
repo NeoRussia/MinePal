@@ -16,35 +16,15 @@ export class Prompter {
 
         let name = this.profile.name;
         let chat = this.profile.model;
-        if (typeof chat === 'string' || chat instanceof String) {
-            chat = {model: chat};
-            if (chat.model.includes('gpt'))
-                chat.api = 'openai';
-            else
-                throw new Error('Unknown model:', chat.model);
-        }
-
-        console.log('Using chat settings:', chat);
-
-        if (chat.api == 'openai')
-            this.chat_model = new GPT(chat.model, chat.url);
-        else
-            throw new Error('Unknown API:', chat.api);
-
         let embedding = this.profile.embedding;
-        if (embedding === undefined) {
-            embedding = {api: chat.api};
-        }
-        else if (typeof embedding === 'string' || embedding instanceof String)
-            embedding = {api: embedding};
 
-        console.log('Using embedding settings:', embedding);
-
-        if (embedding.api == 'openai')
-            this.embedding_model = new GPT(embedding.model, embedding.url);
-        else {
+        if (embedding == "word_overlap") {
+            this.chat_model = new GPT(chat);
             this.embedding_model = null;
-            console.log('Unknown embedding: ', embedding ? embedding.api : '[NOT SPECIFIED]', '. Using word overlap.');
+        } else {
+            const model = new GPT(chat, embedding);
+            this.chat_model = model;
+            this.embedding_model = model;
         }
 
         mkdirSync(`${this.agent.userDataDir}/bots/${name}`, { recursive: true });
@@ -84,7 +64,7 @@ export class Prompter {
 
         if (prompt.includes('$HUD')) {
             const { hudString } = await this.agent.headsUpDisplay();
-            prompt = prompt.replaceAll('$HUD', `Your heads up display: \n${hudString}`);
+            prompt = prompt.replaceAll('$HUD', `# Your heads up display\n${hudString}`);
         }
 
         if (prompt.includes('$COMMAND_DOCS'))
@@ -98,7 +78,7 @@ export class Prompter {
         if (prompt.includes('$TO_SUMMARIZE'))
             prompt = prompt.replaceAll('$TO_SUMMARIZE', stringifyTurns(to_summarize));
         if (prompt.includes('$CONVO'))
-            prompt = prompt.replaceAll('$CONVO', 'Recent conversation:\n' + stringifyTurns(messages));
+            prompt = prompt.replaceAll('$CONVO', '# Recent conversation\n' + stringifyTurns(messages));
         if (prompt.includes('$LAST_GOALS')) {
             let goal_text = '';
             for (let goal in last_goals) {

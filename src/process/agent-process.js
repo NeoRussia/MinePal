@@ -67,7 +67,7 @@ export class AgentProcess {
         // Spawn the agent process using Node.js's child_process.fork
         this.agentProcess = fork(path.join(app.getAppPath(), 'src/process/init-agent.js'), args, {
             stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
-            env: { OPENAI_API_KEY: openai_api_key },
+            env: { ...process.env, OPENAI_API_KEY: openai_api_key },
         });
 
         // Pipe process output to log file
