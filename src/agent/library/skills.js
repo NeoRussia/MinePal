@@ -1099,6 +1099,8 @@ export async function giveToPlayer(bot, username, items) {
   for (const { name, quantity } of itemsList) {
     await discard(bot, name, quantity);
   }
+  await new Promise((resolve) => setTimeout(resolve, 5000));
+ 
   return true;
 }
 
@@ -1613,7 +1615,7 @@ export async function fishing(bot) {
   try {
     await bot.fish();
   } catch (err) {
-    log(bot, `Could not start fishing. ${err}`)
+    log(bot, "Could not start fishing.")
     return false;
   }
 

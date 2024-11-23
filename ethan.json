@@ -21,7 +21,8 @@
     "idle_staring": true,
     "cheat": false,
     "farming": false,
-    "fishing": false
+    "fishing": false,
+    "notify_picked_up_items": true
   },
 
   "conversation_examples": [
@@ -135,13 +136,6 @@
 
     [
       { "role": "user", "content": "<example_username>: end fishing" },
-      { "role": "assistant", "content": "Sure. !stopFishing" },
-      { "role": "system", "content": "Fishing activity stopped." },
-      { "role": "assistant", "content": "I've stopped fishing! What next?" }
-    ],
-
-    [
-      { "role": "user", "content": "<example_username>: finish fishing" },
       { "role": "assistant", "content": "Sure. !stopFishing" },
       { "role": "system", "content": "Fishing activity stopped." },
       { "role": "assistant", "content": "I've stopped fishing! What next?" }

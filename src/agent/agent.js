@@ -80,6 +80,8 @@ export class Agent {
         if (load_mem)
             this.history.load();
 
+        this.bot.modes.setOn("fishing", false); // Forcefully disable fishing mode at startup to prevent the bot from fishing with its face in an incorrect direction if the mode is enabled.
+
         this.bot.once('spawn', async () => {
             // Wait for a bit so stats are not undefined
             await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -386,6 +388,27 @@ export class Agent {
             this.bot.pathfinder.stop(); // Clear any lingering pathfinder
             this.bot.modes.unPauseAll();
             this.coder.executeResume();
+        });
+
+        this.pickedUpItems = [];
+        this.bot.on('playerCollect', (collector, collected) => {
+            if (collector.username === this.name && collected.name === "item") {
+                const item = collected;
+                const metadataIndex = this.settings.minecraft_version && this.settings.minecraft_version <= '1.16.5' ? 7 : 8;
+                const itemName = this.mcdata.getItemName(item.metadata[metadataIndex]?.itemId) || 'unknown';
+                const itemCount = item.metadata[metadataIndex]?.itemCount || 1;
+                const formattedItemName = itemName.replace(/_/g, ' ');
+
+                console.log(`Picked up ${itemCount} ${formattedItemName}!`);
+                
+                for (let item of this.pickedUpItems) {
+                    if (item.name === formattedItemName) {
+                        item.count += itemCount;
+                        return;
+                    }
+                }
+                this.pickedUpItems.push({ name: formattedItemName, count: itemCount });
+            }
         });
 
         // Initialize NPC controller

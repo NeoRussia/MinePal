@@ -265,7 +265,7 @@ export class Coder {
                     this.agent.cleanKill('Code execution refused to stop after 20 seconds. Killing process.');
                     reject(new Error('Code execution timeout'));
                 }
-            }, 20 * 1000); // 20 seconds timeout
+            }, 40 * 1000); // 40 seconds timeout > the maximum wait time of fishing (30 sec)
 
             this.executingQueue.push({ resolve, reject, id: promiseId, timeout });
             console.log(`Creating executingPromise with ID: ${promiseId}`);

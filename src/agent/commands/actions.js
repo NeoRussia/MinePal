@@ -428,12 +428,12 @@ export const actionsList = [
     }),
   },
   {
-    name: "!fishing",
-    description: "Hold a fishing rod in your hand and go fishing.",
+    name: "!startFishing",
+    description: "Make the agent start fishing.",
     perform: wrapExecution(async (agent) => {
-        // if (agent.bot.modes.isOn("fishing")) {
-        //   return "Fishing is already on my mind.";
-        // }
+        if (agent.bot.modes.isOn("fishing")) {
+          return "Fishing is already on my mind.";
+        }
 
         let fishing_rod = agent.bot.inventory.items().find((item) => item.name === "fishing_rod");
         if (!fishing_rod) {

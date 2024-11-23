@@ -43,7 +43,10 @@ export class History {
 
         this.memory = this.db.data.memory;
         this.turns = this.db.data.turns;
-        if (this.db.data.modes) this.agent.bot.modes.loadJson(this.db.data.modes);
+        if (this.db.data.modes) {
+            this.agent.bot.modes.loadJson(this.db.data.modes);
+            this.agent.bot.modes.setOn("fishing", false); // Forcefully disable fishing mode at startup to prevent the bot from fishing with its face in an incorrect direction if the mode is enabled.
+        }
         if (this.db.data.memory_bank) this.agent.memory_bank.loadJson(this.db.data.memory_bank);
     }
 

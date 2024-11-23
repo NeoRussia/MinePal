@@ -159,6 +159,7 @@ const modes = [
                 execute(this, agent, async () => {
                     let success = await skills.fishing(agent.bot);
                     if (!success) {
+                        await agent.sendMessage(agent.bot.output);
                         agent.bot.modes.setOn("fishing", false);
                     }
                     return success;
@@ -176,9 +177,7 @@ const modes = [
         on: true,
         active: false,
 
-        wait: 2, // number of seconds to wait after noticing an item to pick it up
         prev_item: null,
-        noticed_at: -1,
         /**
          * Update function for item collecting mode.
          * Detects nearby items and makes the agent pick them up after a short delay.
@@ -187,24 +186,46 @@ const modes = [
         update: async function (agent) {
             let item = world.getNearestEntityWhere(agent.bot, entity => entity.name === 'item', 8);
             if (item && item !== this.prev_item && await world.isClearPath(agent.bot, item)) {
-                if (this.noticed_at === -1) {
-                    this.noticed_at = Date.now();
-                }
-                if (Date.now() - this.noticed_at > this.wait * 1000) {
-                    const metadataIndex = agent.settings.minecraft_version && agent.settings.minecraft_version <= '1.16.5' ? 7 : 8;
-                    const itemName = agent.mcdata.getItemName(item.metadata[metadataIndex]?.itemId) || 'unknown';
-                    const itemCount = item.metadata[metadataIndex]?.itemCount || 1;
-                    const formattedItemName = itemName.replace(/_/g, ' ');
-                    await agent.sendMessage(`Picking up ${itemCount} ${formattedItemName}!`);
-                    this.prev_item = item;
-                    execute(this, agent, async () => {
-                        await skills.pickupNearbyItems(agent.bot);
-                    });
-                    this.noticed_at = -1;
-                }
+                this.prev_item = item;
+                execute(this, agent, async () => {
+                    await skills.pickupNearbyItems(agent.bot);
+                });
             }
-            else {
-                this.noticed_at = -1;
+        }
+    },
+    {
+        name: 'notify_picked_up_items',
+        description: 'Notify picked up items.',
+        interrupts: ['all'],
+        on: true,
+        active: false,
+
+        wait: 3, // number of seconds to wait after noticing an item to pick it up
+        min_wait: 3,
+        max_wait: 3.2 * 60,
+        wait_scale: 2, // Exponential Backoff scale
+        noticed_at: -1,
+        /**
+         * Update function for notifying picked up items mode.
+         * @param {Object} agent - The agent object containing the bot.
+         */
+        update: async function (agent) {
+            if (this.noticed_at === -1) {
+                this.noticed_at = Date.now();
+            }
+
+            let pickedUpItems = agent.pickedUpItems;
+            if (Date.now() - this.noticed_at >= this.wait * 1000) {
+                if (pickedUpItems.length > 0) {
+                        agent.pickedUpItems = [];
+                    let message = "Picked up " + (pickedUpItems.map((i) => `${i.count} ${i.name}`).join(", ")) + "!";
+                    // console.log(message);
+                    await agent.sendMessage(message);
+                    this.noticed_at = Date.now();
+                    this.wait = Math.min(this.wait_scale * this.wait, this.max_wait);
+                } else if (!agent.bot.modes.isOn("fishing")) {
+                    this.wait = this.min_wait;
+                }
             }
         }
     },
