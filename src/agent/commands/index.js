@@ -97,19 +97,19 @@ export async function executeCommand(agent, message) {
 }
 
 export function getCommandDocs() {
-    let docs = `\n*COMMAND DOCS\n You can use the following commands to perform actions and get information about the world. 
-    Use the commands with the syntax: !commandName or !commandName("arg1", 1.2, ...) if the command takes arguments.\n
-    Do not use codeblocks. Only use one command in each response, trailing commands and comments will be ignored.\n`;
+    let docs = `\n# COMMAND DOCS\n You can use the following commands to perform actions and get information about the world.
+Use the commands with the syntax: !commandName or !commandName("arg1", 1.2, ...) if the command takes arguments.
+Do not use codeblocks. Only use one command in each response, trailing commands and comments will be ignored.\n`;
     for (let command of commandList) {
         if (command.callable !== false) {
-            docs += command.name + ': ' + command.description + '\n';
+            docs += `- ${command.name}: ${command.description}\n`;
             if (command.params) {
-                docs += 'Params:\n';
+                docs += "  - Params:\n";
                 for (let param in command.params) {
-                    docs += param + ': ' + command.params[param] + '\n';
+                    docs += `    - ${param}: ${command.params[param]}\n`;
                 }
             }
         }
     }
-    return docs + '*\n';
+    return docs + '\n';
 }

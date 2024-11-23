@@ -62,10 +62,10 @@ export class Examples {
     async createExampleMessage(turns) {
         let selected_examples = await this.getRelevant(turns);
 
-        let msg = 'Examples of how to respond:\n';
+        let msg = '# Examples of how to respond\n';
         for (let i=0; i<selected_examples.length; i++) {
             let example = selected_examples[i];
-            msg += `Example ${i+1}:\n${stringifyTurns(example)}\n\n`;
+            msg += `## Example ${i+1}\n${stringifyTurns(example)}\n\n`;
         }
         return msg;
     }

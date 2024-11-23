@@ -205,7 +205,7 @@ export class Agent {
         newHUD.nearbyEntities = world.getNearbyEntityTypes(this.bot);
 
         // Construct HUD string
-        let statsRes = "STATS";
+        let statsRes = "## STATS";
         statsRes += `\n- Position: ${newHUD.position}`;
         statsRes += `\n- Gamemode: ${newHUD.gamemode}`;
         statsRes += `\n- Health: ${newHUD.health}`;
@@ -218,26 +218,26 @@ export class Agent {
             statsRes += "\n- Other Players: " + newHUD.otherPlayers.join(", ");
         }
 
-        let inventoryRes = "INVENTORY";
-        inventoryRes += "\nBackpack:" + (newHUD.backpack.length ? `\n- ${newHUD.backpack.join("\n- ")}` : " none");
-        inventoryRes += "\nHotbar:" + (newHUD.hotbar.length ? `\n- ${newHUD.hotbar.join("\n- ")}` : " none");
-        inventoryRes += "\nOff Hand Slot:" + (newHUD.offHand.length ? `\n- ${newHUD.offHand.join("\n- ")}` : " none");
-        inventoryRes += "\nArmor Slots:" + (newHUD.armor.length ? `\n- ${newHUD.armor.join("\n- ")}` : " none");
+        let inventoryRes = "## INVENTORY";
+        inventoryRes += "\n- Backpack:" + (newHUD.backpack.length ? `\n  - ${newHUD.backpack.join("\n  - ")}` : " none");
+        inventoryRes += "\n- Hotbar:" + (newHUD.hotbar.length ? `\n  - ${newHUD.hotbar.join("\n  - ")}` : " none");
+        inventoryRes += "\n- Off Hand Slot:" + (newHUD.offHand.length ? `\n  - ${newHUD.offHand.join("\n  - ")}` : " none");
+        inventoryRes += "\n- Armor Slots:" + (newHUD.armor.length ? `\n  - ${newHUD.armor.join("\n  - ")}` : " none");
 
         if (this.bot.game.gameMode === "creative") {
             inventoryRes += "\n(You have infinite items in creative mode)";
         }
 
-        let blocksRes = "NEARBY_BLOCKS";
+        let blocksRes = "## NEARBY_BLOCKS";
         blocksRes += newHUD.nearbyBlocks.length ? `\n- ${newHUD.nearbyBlocks.join("\n- ")}` : ": none";
 
-        let entitiesRes = "NEARBY_ENTITIES";
+        let entitiesRes = "## NEARBY_ENTITIES";
         entitiesRes += newHUD.nearbyEntities.length ? `\n- mob: ${newHUD.nearbyEntities.join("\n- mob: ")}` : ": none";
 
         // Return both newHUD and the HUD string
         return {
             newHUD,
-            hudString: `${statsRes}\n${inventoryRes}\n${blocksRes}\n${entitiesRes}`
+            hudString: `${statsRes}\n${inventoryRes}\n\n${blocksRes}\n\n${entitiesRes}\n`
         };
     }
     
@@ -271,10 +271,10 @@ export class Agent {
                     const newItems = newList.filter(item => !oldList.includes(item));
 
                     if (goneItems.length > 0) {
-                        diffText += `**GONE: ${field} - ${goneItems.join(', ')}\n`;
+                        diffText += `\n  * GONE: ${field} - ${goneItems.join(', ')}\n`;
                     }
                     if (newItems.length > 0) {
-                        diffText += `**NEW: ${field} - ${newItems.join(', ')}\n`;
+                        diffText += `\n  * NEW: ${field} - ${newItems.join(', ')}\n`;
                     }
                 });
 

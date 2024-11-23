@@ -2,11 +2,11 @@ export function stringifyTurns(turns) {
     let res = '';
     for (let turn of turns) {
         if (turn.role === 'assistant') {
-            res += `\nYour output:\n${turn.content}`;
+            res += `\n- Your output: ${turn.content}`;
         } else if (turn.role === 'system') {
-            res += `\nSystem output: ${turn.content}`;
+            res += `\n- System output: ${turn.content}`;
         } else {
-            res += `\nUser input: ${turn.content}`;
+            res += `\n- User input: ${turn.content}`;
         
         }
     }
