@@ -2,49 +2,58 @@ const { Vec3 } = require('vec3')
 const { createDoneTask, createTask } = require('../promise_utils')
 const { finished } = require('stream')
 
-module.exports = inject
+module.exports = inject;
 
 function inject (bot) {
-  let bobberId = 90
+  let bobberId = 90;
   // Before 1.14 the bobber entity keep changing name at each version (but the id stays 90)
   // 1.14 changes the id, but hopefully we can stick with the name: fishing_bobber
   // the alternative would be to rename it in all version of mcData
   if (bot.supportFeature('fishingBobberCorrectlyNamed')) {
-    bobberId = bot.registry.entitiesByName.fishing_bobber.id
+    bobberId = bot.registry.entitiesByName.fishing_bobber.id;
   }
 
-  let fishingTask = createDoneTask()
-  let lastBobber = null
+  let fishingTask = createDoneTask();
+  let lastBobber = null;
+  let lastBobberPos = null;
 
   bot._client.on('spawn_entity', (packet) => {
     if (packet.type === bobberId && !fishingTask.done && !lastBobber) {
-      lastBobber = bot.entities[packet.entityId]
+      lastBobber = bot.entities[packet.entityId];
     }
-  })
+  });
 
-  bot._client.on('world_particles', (packet) => {
-    if (!lastBobber || fishingTask.done) return
+  bot._client.on('world_particles', async (packet) => {
+    if (!lastBobber || fishingTask.done) return;
 
-    const pos = lastBobber.position
-    const parts = bot.registry.particlesByName
+    const pos = lastBobber.position;
+    const parts = bot.registry.particlesByName;
+
+    if (!lastBobberPos || lastBobberPos.distanceTo(pos) > 0.5) {
+      lastBobberPos = pos;
+      await bot.lookAt(pos);
+    }
+
     if (packet.particleId === (parts?.fishing ?? parts.bubble).id && packet.particles === 6 && pos.distanceTo(new Vec3(packet.x, pos.y, packet.z)) <= 1.23) {
-      bot.activateItem()
-      lastBobber = undefined
-      fishingTask.finish()
+      bot.activateItem();
+      lastBobber = null;
+      lastBobberPos = null;
+      fishingTask.finish();
     }
-  })
+  });
 
   bot._client.on('entity_destroy', (packet) => {
-    if (!lastBobber) return
+    if (!lastBobber) return;
     if (packet.entityIds.some(id => id === lastBobber.id)) {
-      lastBobber = undefined
-      fishingTask.cancel(new Error('Fishing cancelled'))
+      lastBobber = null;
+      lastBobberPos = null;
+      fishingTask.cancel(new Error('Fishing cancelled'));
     }
-  })
+  });
 
   async function fish () {
     if (!fishingTask.done) {
-      fishingTask.cancel(new Error('Fishing cancelled due to calling bot.fish() again'))
+      fishingTask.cancel(new Error('Fishing cancelled due to calling bot.fish() again'));
     }
 
     fishingTask = createTask()
@@ -55,13 +64,14 @@ function inject (bot) {
   }
 
   function cancelTask() {
-    if (!lastBobber || fishingTask.done) return
-    bot.activateItem()
-    lastBobber = undefined
-    fishingTask.finish()
+    if (!lastBobber || fishingTask.done) return;
+    bot.activateItem();
+    lastBobber = null;
+    lastBobberPos = null;
+    fishingTask.finish();
     // fishingTask.cancel(new Error('Fishing cancelled'))
   }
 
-  bot.fish = fish
-  bot.fish.cancelTask = cancelTask
+  bot.fish = fish;
+  bot.fish.cancelTask = cancelTask;
 }
