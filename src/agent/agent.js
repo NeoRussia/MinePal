@@ -80,6 +80,8 @@ export class Agent {
         if (load_mem)
             this.history.load();
 
+        this.bot.modes.setOn("fishing", false); // Forcefully disable fishing mode at startup to prevent the bot from fishing with its face in an incorrect direction if the mode is enabled.
+
         this.bot.once('spawn', async () => {
             // Wait for a bit so stats are not undefined
             await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -179,25 +181,25 @@ export class Agent {
         for (let i = mainInventoryStart; i <= mainInventoryEnd; i++) {
             let item = this.bot.inventory.slots[i];
             if (item) {
-                newHUD.backpack.push(`${item.name}: ${item.count}`);
+                newHUD.backpack.push(`${item.count} ${item.name}`);
             }
         }
 
         for (let i = hotbarStart; i <= hotbarEnd; i++) {
             let item = this.bot.inventory.slots[i];
             if (item) {
-                newHUD.hotbar.push(`${item.name}: ${item.count}`);
+                newHUD.hotbar.push(`${item.count} ${item.name}`);
             }
         }
 
         if (!this.bot.supportFeature("doesntHaveOffHandSlot")) {
             let offHandItem = this.bot.inventory.slots[offHandSlot];
-            newHUD.offHand.push(offHandItem ? `${offHandItem.name}: ${offHandItem.count}` : "empty");
+            newHUD.offHand.push(offHandItem ? `${offHandItem.count} ${offHandItem.name}` : "empty");
         }
 
         for (const [slotName, slotIndex] of Object.entries(armorSlots)) {
             let item = this.bot.inventory.slots[slotIndex];
-            newHUD.armor.push(`${slotName}: ${item ? `${item.name}: ${item.count}` : "empty"}`);
+            newHUD.armor.push(`${slotName}: ${item ? `${item.count} ${item.name}` : "empty"}`);
         }
 
         // Initializing nearby blocks and entities
@@ -205,7 +207,7 @@ export class Agent {
         newHUD.nearbyEntities = world.getNearbyEntityTypes(this.bot);
 
         // Construct HUD string
-        let statsRes = "STATS";
+        let statsRes = "## STATS";
         statsRes += `\n- Position: ${newHUD.position}`;
         statsRes += `\n- Gamemode: ${newHUD.gamemode}`;
         statsRes += `\n- Health: ${newHUD.health}`;
@@ -218,26 +220,26 @@ export class Agent {
             statsRes += "\n- Other Players: " + newHUD.otherPlayers.join(", ");
         }
 
-        let inventoryRes = "INVENTORY";
-        inventoryRes += "\nBackpack:" + (newHUD.backpack.length ? `\n- ${newHUD.backpack.join("\n- ")}` : " none");
-        inventoryRes += "\nHotbar:" + (newHUD.hotbar.length ? `\n- ${newHUD.hotbar.join("\n- ")}` : " none");
-        inventoryRes += "\nOff Hand Slot:" + (newHUD.offHand.length ? `\n- ${newHUD.offHand.join("\n- ")}` : " none");
-        inventoryRes += "\nArmor Slots:" + (newHUD.armor.length ? `\n- ${newHUD.armor.join("\n- ")}` : " none");
+        let inventoryRes = "## INVENTORY (All the items you have.)";
+        inventoryRes += "\n### Backpack" + (newHUD.backpack.length ? `\n- ${newHUD.backpack.join("\n- ")}` : "\nnone");
+        inventoryRes += "\n### Hotbar" + (newHUD.hotbar.length ? `\n- ${newHUD.hotbar.join("\n- ")}` : "\nnone");
+        inventoryRes += "\n### Off Hand Slot" + (newHUD.offHand.length ? `\n- ${newHUD.offHand.join("\n- ")}` : "\nnone");
+        inventoryRes += "\n### Armor Slots" + (newHUD.armor.length ? `\n- ${newHUD.armor.join("\n- ")}` : "\nnone");
 
         if (this.bot.game.gameMode === "creative") {
             inventoryRes += "\n(You have infinite items in creative mode)";
         }
 
-        let blocksRes = "NEARBY_BLOCKS";
-        blocksRes += newHUD.nearbyBlocks.length ? `\n- ${newHUD.nearbyBlocks.join("\n- ")}` : ": none";
+        let blocksRes = "## NEARBY_BLOCKS";
+        blocksRes += newHUD.nearbyBlocks.length ? `\n- ${newHUD.nearbyBlocks.join("\n- ")}` : "\nnone";
 
-        let entitiesRes = "NEARBY_ENTITIES";
-        entitiesRes += newHUD.nearbyEntities.length ? `\n- mob: ${newHUD.nearbyEntities.join("\n- mob: ")}` : ": none";
+        let entitiesRes = "## NEARBY_ENTITIES";
+        entitiesRes += newHUD.nearbyEntities.length ? `\n- mob: ${newHUD.nearbyEntities.join("\n- mob: ")}` : "\nnone";
 
         // Return both newHUD and the HUD string
         return {
             newHUD,
-            hudString: `${statsRes}\n${inventoryRes}\n${blocksRes}\n${entitiesRes}`
+            hudString: `${statsRes}\n${inventoryRes}\n\n${blocksRes}\n\n${entitiesRes}\n`
         };
     }
     
@@ -271,10 +273,10 @@ export class Agent {
                     const newItems = newList.filter(item => !oldList.includes(item));
 
                     if (goneItems.length > 0) {
-                        diffText += `**GONE: ${field} - ${goneItems.join(', ')}\n`;
+                        diffText += `  * GONE: ${field} - ${goneItems.join(', ')}\n`;
                     }
                     if (newItems.length > 0) {
-                        diffText += `**NEW: ${field} - ${newItems.join(', ')}\n`;
+                        diffText += `  * NEW: ${field} - ${newItems.join(', ')}\n`;
                     }
                 });
 
@@ -386,6 +388,27 @@ export class Agent {
             this.bot.pathfinder.stop(); // Clear any lingering pathfinder
             this.bot.modes.unPauseAll();
             this.coder.executeResume();
+        });
+
+        this.pickedUpItems = [];
+        this.bot.on('playerCollect', (collector, collected) => {
+            if (collector.username === this.name && collected.name === "item") {
+                const item = collected;
+                const metadataIndex = this.settings.minecraft_version && this.settings.minecraft_version <= '1.16.5' ? 7 : 8;
+                const itemName = this.mcdata.getItemName(item.metadata[metadataIndex]?.itemId) || 'unknown';
+                const itemCount = item.metadata[metadataIndex]?.itemCount || 1;
+                const formattedItemName = itemName.replace(/_/g, ' ');
+
+                console.log(`Picked up ${itemCount} ${formattedItemName}!`);
+                
+                for (let item of this.pickedUpItems) {
+                    if (item.name === formattedItemName) {
+                        item.count += itemCount;
+                        return;
+                    }
+                }
+                this.pickedUpItems.push({ name: formattedItemName, count: itemCount });
+            }
         });
 
         // Initialize NPC controller

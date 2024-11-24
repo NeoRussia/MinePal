@@ -1,7 +1,11 @@
 import * as skills from "../library/skills.js";
 
-function wrapExecution(func, timeout = -1, resume_name = null) {
+function wrapExecution(func, timeout=-1, resume_name=null, precondition=null) {
   return async function (agent, ...args) {
+    if (precondition !== null) {
+      if (!precondition(agent, ...args)) return;
+    }
+
     let code_return;
     if (resume_name != null) { // not used afaik
       code_return = await agent.coder.executeResume(
@@ -33,6 +37,7 @@ export const actionsList = [
       console.log("[CODERSTOP] Stop command.");
       await agent.coder.stop();
       agent.followPlayerName = null;
+      agent.bot.modes.setOn("fishing", false);
       agent.coder.clear();
       agent.coder.cancelResume();
       agent.bot.emit("idle");
@@ -285,7 +290,6 @@ export const actionsList = [
       "Stay in the current location no matter what. Pauses all modes.",
     perform: wrapExecution(async (agent) => {
       agent.followPlayerName = null;
-      await agent.coder.stop();
       await skills.stay(agent.bot);
     }),
   },
@@ -426,6 +430,39 @@ export const actionsList = [
     perform: wrapExecution(async (agent, house_type) => {
       return await skills.buildHouse(agent.bot, house_type);
     }),
+  },
+  {
+    name: "!startFishing",
+    description: "Make the agent start fishing.",
+    perform: wrapExecution(async (agent) => {
+        let fishing_rod = agent.bot.inventory.items().find((item) => item.name === "fishing_rod");
+        if (!fishing_rod) {
+          skills.log(agent.bot, "No fishing rod.");
+          return "No fishing rod.";
+        }
+
+        agent.followPlayerName = null;
+        agent.bot.modes.setOn("fishing", true);
+        return "Fishing has come to mind.";
+      }, 
+      -1, 
+      null, 
+      (agent) => {
+        return !agent.bot.modes.isOn("fishing");
+      }),
+  },
+  {
+    name: "!stopFishing",
+    description: "Make the agent stop fishing.",
+    perform: async (agent) => {
+      if (agent.bot.modes.isOn("fishing")) {
+        agent.bot.modes.setOn("fishing", false);
+        agent.bot.fish.cancelTask();
+        return "Fishing stopped.";
+      } else{
+        return "Fishing is not in progress.";
+      }
+    },
   }
   // {
   //   name: "!goal",

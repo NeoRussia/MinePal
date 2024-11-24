@@ -43,7 +43,10 @@ export class History {
 
         this.memory = this.db.data.memory;
         this.turns = this.db.data.turns;
-        if (this.db.data.modes) this.agent.bot.modes.loadJson(this.db.data.modes);
+        if (this.db.data.modes) {
+            this.agent.bot.modes.loadJson(this.db.data.modes);
+            this.agent.bot.modes.setOn("fishing", false); // Forcefully disable fishing mode at startup to prevent the bot from fishing with its face in an incorrect direction if the mode is enabled.
+        }
         if (this.db.data.memory_bank) this.agent.memory_bank.loadJson(this.db.data.memory_bank);
     }
 
@@ -53,7 +56,7 @@ export class History {
 
     async storeMemories(turns) {
         console.log(`Process ${process.pid}: Storing memories...`);
-        this.memory = await this.agent.prompter.promptMemSaving(this.getHistory(), turns);
+        this.memory = await this.agent.prompter.promptMemSaving(this.memory, turns);
         console.log(`Process ${process.pid}: Memory updated to: `, this.memory);
     }
 
@@ -66,7 +69,7 @@ export class History {
             role = 'user';
             content = `${name}: ${content}`;
         }
-        this.turns.push({role, content});
+        this.turns.push({role, content: content.trim()});
 
         // Summarize older turns into memory
         if (this.turns.length >= this.max_messages) {

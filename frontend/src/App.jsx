@@ -35,7 +35,7 @@ function App() {
 
   const handleProfileSelect = (profile) => {
     setSelectedProfiles(prev => 
-      prev.includes(profile) ? prev.filter(p => p !== profile) : [...prev, profile]
+      prev.map(p => p.name).includes(profile.name) ? prev.filter(p => p !== profile) : [...prev, profile]
     );
     console.log("selected", selectedProfiles);
   };
@@ -66,6 +66,8 @@ function App() {
           name: profile.name,
           personality: profile.personality
         }));
+
+        setSelectedProfiles(prev => [...(filteredSettings.profiles)]);
       }
 
       setSettings(prevSettings => ({ ...prevSettings, ...filteredSettings }));

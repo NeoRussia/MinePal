@@ -377,6 +377,7 @@ export async function attackNearest(
    * await skills.attackNearest(bot, "zombie", true);
    **/
   bot.modes.pause("cowardice");
+  bot.modes.pause("fishing");
   const nearbyEntities = world.getNearbyEntities(bot, 24);
   let mob;
   if (isPlayer) {
@@ -451,6 +452,7 @@ export async function defendSelf(bot, range = 9) {
    * **/
   bot.modes.pause("self_defense");
   bot.modes.pause("cowardice");
+  bot.modes.pause("fishing");
   let attacked = false;
   let enemy = world.getNearestEntityWhere(
     bot,
@@ -563,6 +565,8 @@ export async function collectBlock(
     carrot: 7,
     potato: 7,
   };
+
+  stopFishing(bot);
 
   while (collected < num && retries < 3) {
     console.log(
@@ -1089,11 +1093,14 @@ export async function giveToPlayer(bot, username, items) {
     log(bot, `Could not find ${username}.`);
     return false;
   }
+  stopFishing(bot);
   await goToPlayer(bot, username);
   await bot.lookAt(player.position);
   for (const { name, quantity } of itemsList) {
     await discard(bot, name, quantity);
   }
+  await new Promise((resolve) => setTimeout(resolve, 5000));
+ 
   return true;
 }
 
@@ -1114,6 +1121,7 @@ export async function goToPosition(bot, x, y, z, min_distance = 2) {
     log(bot, `Missing coordinates, given x:${x} y:${y} z:${z}`);
     return false;
   }
+  stopFishing(bot);
   if (bot.modes.isOn("cheat")) {
     bot.chat("/tp @s " + x + " " + y + " " + z);
     log(bot, `Teleported to ${x}, ${y}, ${z}.`);
@@ -1153,6 +1161,7 @@ export async function goToPlayer(bot, username, distance = 1) {
     return false;
   }
 
+  stopFishing(bot);
   const move = new pf.Movements(bot);
   bot.pathfinder.setMovements(move);
   await bot.pathfinder.goto(new pf.goals.GoalFollow(player, distance), true);
@@ -1176,6 +1185,7 @@ export async function teleportToPlayer(bot, username) {
     player &&
     bot.entity.position.distanceTo(player.position) <= NEAR_DISTANCE
   ) {
+    stopFishing(bot);
     log(bot, `Teleported to ${username}.`);
     return true;
   } else {
@@ -1196,6 +1206,7 @@ export async function followPlayer(bot, username, distance = 4) {
   let player = bot.players[username].entity;
   if (!player) return false;
 
+  stopFishing(bot);
   const move = new pf.Movements(bot);
   bot.pathfinder.setMovements(move);
   bot.pathfinder.setGoal(new pf.goals.GoalFollow(player, distance), true);
@@ -1216,6 +1227,8 @@ export async function moveAway(bot, distance) {
    * @example
    * await skills.moveAway(bot, 8);
    **/
+  stopFishing(bot);
+
   const pos = bot.entity.position;
   let goal = new pf.goals.GoalNear(pos.x, pos.y, pos.z, distance);
   let inverted_goal = new pf.goals.GoalInvert(goal);
@@ -1249,6 +1262,7 @@ export async function avoidEnemies(bot, distance = 16) {
    * @example
    * await skills.avoidEnemies(bot, 8);
    **/
+  bot.modes.pause("fishing");
   bot.modes.pause("self_preservation"); // prevents damage-on-low-health from interrupting the bot
   let enemy = world.getNearestEntityWhere(
     bot,
@@ -1289,6 +1303,7 @@ export async function stay(bot) {
   bot.modes.pause("hunting");
   bot.modes.pause("torch_placing");
   bot.modes.pause("item_collecting");
+  bot.modes.pause("fishing");
   while (!bot.interrupt_code) {
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
@@ -1541,6 +1556,81 @@ export async function activateNearestEntity(bot, entityType) {
     )}, y:${entity.position.y.toFixed(1)}, z:${entity.position.z.toFixed(1)}.`
   );
   return true;
+}
+
+export async function goToWater(bot) {
+  /**
+   * Move to the near water block.
+   * @param {MinecraftBot} bot, reference to the minecraft bot.
+   * @returns {Promise<boolean>} true if moved successfully, false otherwise.
+   */
+  let nearWater = await world.getNearAccessibleBlock(bot, "water", MID_DISTANCE, 0);
+  if (!nearWater) {
+    log(bot, "Could not find any water nearby.");
+    return false;
+  }
+
+  let pos = nearWater.position.offset(0.5, 0.5, 0.5);
+  if (bot.entity.position.distanceTo(pos) > 2) {
+    let movements = new pf.Movements(bot);
+    bot.pathfinder.setMovements(movements);
+    await bot.pathfinder.goto(new pf.goals.GoalNear(pos.x, pos.y, pos.z, 2));
+  }
+
+  return true;
+}
+
+export async function fishing(bot) {
+  /**
+   * Move to the near water block and fish.
+   * @param {MinecraftBot} bot, reference to the minecraft bot.
+   * @returns {Promise<boolean>} true if fishing starts successfully, false otherwise.
+   */
+  let fishing_rod = bot.inventory.items().find((item) => item.name === "fishing_rod");
+  if (!fishing_rod) {
+    log(bot, "No fishing rod.");
+    return false;
+  }
+
+  let nearWater = await world.getNearAccessibleBlock(bot, "water", MID_DISTANCE, 0);
+  if (!nearWater) {
+    log(bot, "Could not find any water nearby.");
+    return false;
+  }
+
+  bot.modes.pause("idle_staring");
+  bot.modes.pause("hunting");
+  bot.modes.pause("torch_placing");
+
+  let waterPos = nearWater.position.offset(0.5, 0.5, 0.5);
+  if (bot.entity.position.distanceTo(waterPos) > 2) {
+    let movements = new pf.Movements(bot);
+    bot.pathfinder.setMovements(movements);
+    await bot.pathfinder.goto(new pf.goals.GoalNear(waterPos.x, waterPos.y, waterPos.z, 2));
+  }
+
+  await bot.equip(fishing_rod, "hand");
+  await bot.lookAt(waterPos);
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  try {
+    await bot.fish();
+  } catch (err) {
+    log(bot, "Could not start fishing.")
+    return false;
+  }
+
+  return true;
+}
+
+export function stopFishing(bot) {
+  /**
+   * Stop fishing.
+   * @param {MinecraftBot} bot, reference to the minecraft bot.
+   */
+  if (bot.modes.isOn("fishing")) {
+    bot.modes.setOn("fishing", false);
+    bot.fish.cancelTask();
+  }
 }
 
 export async function useItemOnEntity(bot, entityName, itemName) {
