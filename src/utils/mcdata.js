@@ -4,9 +4,10 @@ import prismarine_items from 'prismarine-item';
 import { pathfinder } from 'mineflayer-pathfinder';
 import { plugin as pvp } from 'mineflayer-pvp';
 import { plugin as collectblock } from 'mineflayer-collectblock';
-import { plugin as autoEat } from 'mineflayer-auto-eat';
+import { loader as autoEat } from 'mineflayer-auto-eat';
 import plugin from 'mineflayer-armor-manager';
 const armorManager = plugin;
+import { plugin as fishing } from '../agent/library/plugins/fishing.js';
 
 class MCData {
     constructor(settings) {
@@ -42,6 +43,7 @@ class MCData {
         this.bot.loadPlugin(collectblock);
         this.bot.loadPlugin(autoEat);
         this.bot.loadPlugin(armorManager); // auto equip armor
+        this.bot.loadPlugin(fishing);
         return this.bot;
     }
 

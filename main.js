@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { promisify } from 'util';
-import { app, BrowserWindow, systemPreferences } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import path from 'path';
 import { startServer } from './server.js';
 import { createStream } from 'rotating-file-stream';
