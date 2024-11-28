@@ -1,13 +1,13 @@
 # MinePal
 
-## Overview
+## 概要
 
-MinePal is a Minecraft companion app with a React frontend, a local backend, and an AI agent.
+MinePalは生成AIの頭脳を持ったMinecraftボットです。チャットで指示を出すと行動をしてくれたり、雑談に応じてくれたりします。
+このリポジトリはleo4life2さんが作られたMinePalをベースに、シンプル化したり、バグを修正したり、釣りなどの能力を追加したりしたものです。
 
-## Structure
+## システム構成
 
 ```mermaid
-%%{init:{'theme':'dark'}}%%
 graph TD
 	Player((Player))
 	
