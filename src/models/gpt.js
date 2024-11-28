@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import { Langfuse } from "langfuse";
 
-const DEBUG = true;
+const DEBUG = false;
 
 const MINEPAL_RESPONSE_FORMAT = {
     type: "json_schema",
