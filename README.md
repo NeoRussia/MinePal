@@ -49,12 +49,12 @@ graph TD
   GUI -.......->|APIキーの有効性確認| OpenAI_API
   Local_Server -->|ボットの起動や指示| Agent
   Mineflayer -->|イベント通知<br>（チャットや状況変化）| Agent_
-  Agent_ -..->|コマンド実行| actions
-  actions -..->|スキル実行| skills
-  skills -..->|Bot操作| Mineflayer
+  Agent_ --->|コマンド実行| actions
+  actions --->|スキル実行| skills
+  skills --->|Bot操作| Mineflayer
   Mineflayer -..->|Bot操作| MinePal_Bot
-  skills -..->|環境情報取得| world
-  world -..->|環境情報取得| Mineflayer
+  skills --->|環境情報取得| world
+  world --->|環境情報取得| Mineflayer
   Mineflayer -..->|環境情報取得| Minecraft
   MinePal_Bot -...->|イベント通知<br>（チャット）| Mineflayer
   Minecraft -..->|イベント通知<br>（状況変化）| Mineflayer
