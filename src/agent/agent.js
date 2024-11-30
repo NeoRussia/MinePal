@@ -312,7 +312,7 @@ export class Agent {
 
                 let execute_res = await executeCommand(this, res);
 
-                console.log('Agent executed:', command_name, 'and got:', execute_res);
+                console.log(`Agent executed: ${command_name} and got: "${execute_res}"`);
 
                 if (execute_res)
                     this.history.add('system', execute_res);

@@ -74,6 +74,12 @@ function numParams(command) {
     return Object.keys(command.params).length;
 }
 
+function stringifyCommand(command) {
+    let result = command.commandName;
+    result += "(" + (command.args.map((arg) => { return typeof arg === "string"? `"${arg}"` : "" + arg }).join(", ")) + ")";
+    return result;
+}
+
 export async function executeCommand(agent, message) {
     let parsed = parseCommandMessage(message);
     if (parsed) {
@@ -90,7 +96,12 @@ export async function executeCommand(agent, message) {
             console.log('Agent:', agent.name);
             console.log('Arguments:', JSON.stringify(parsed.args, null, 2));
             
-            return await command.perform(agent, ...parsed.args);
+            const command_result = await command.perform(agent, ...parsed.args);
+            if (command_result) {
+                return `Executed Command: ${stringifyCommand(parsed)}.\nResult: ${command_result}`;
+            } else {
+                return command_result;
+            }
         }
     } else
         return `Command is incorrectly formatted`;

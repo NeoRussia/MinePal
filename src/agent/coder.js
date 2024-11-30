@@ -243,7 +243,7 @@ export class Coder {
                 First outputs:\n${output.substring(0, MAX_OUT/2)}\n...skipping many lines.\nFinal outputs:\n ${output.substring(output.length - MAX_OUT/2)}`;
         }
         else {
-            output = 'Code output:\n' + output;
+            output = output;
         }
         return output;
     }

@@ -1,9 +1,9 @@
 import * as skills from "../library/skills.js";
 
-function wrapExecution(func, timeout=-1, resume_name=null, precondition=null) {
+function wrapExecution(func, timeout=-1, resume_name=null, precondition=null, precondition_error_message=null) {
   return async function (agent, ...args) {
     if (precondition !== null) {
-      if (!precondition(agent, ...args)) return;
+      if (!precondition(agent, ...args)) return precondition_error_message;
     }
 
     let code_return;
@@ -279,9 +279,10 @@ export const actionsList = [
     perform: wrapExecution(async (agent, offHand = false) => {
       const success = await skills.activateItem(agent.bot, offHand);
       const handName = offHand ? "off hand" : "main hand";
-      return success
+
+      skills.log(agent.bot, success
         ? `Activated item in ${handName}.`
-        : `Failed to activate item in ${handName}.`;
+        : `Failed to activate item in ${handName}.`);
     }),
   },
   {
@@ -359,9 +360,9 @@ export const actionsList = [
     description: "Dismount the bot from any entity it is currently riding.",
     perform: wrapExecution(async (agent) => {
       const success = await skills.dismount(agent.bot);
-      return success
+      skills.log(agent.bot, success
         ? "Successfully dismounted."
-        : "Failed to dismount or not riding any entity.";
+        : "Failed to dismount or not riding any entity.");
     }),
   },
   {
@@ -385,9 +386,9 @@ export const actionsList = [
     params: { type: "(string) The type of entity to activate." },
     perform: wrapExecution(async (agent, type) => {
       const success = await skills.activateNearestEntity(agent.bot, type);
-      return success
+      skills.log(agent.bot, success
         ? `Activated nearest ${type}.`
-        : `No ${type} found nearby.`;
+        : `No ${type} found nearby.`);
     }),
   },
   {
@@ -395,7 +396,7 @@ export const actionsList = [
     description: "Look in the nearest furnace and log its contents.",
     perform: wrapExecution(async (agent) => {
       const success = await skills.lookInFurnace(agent.bot);
-      return success ? "Furnace contents seen." : "No furnace found nearby.";
+      skills.log(agent.bot, success ? "Furnace contents seen." : "No furnace found nearby.");
     }),
   },
   {
@@ -406,9 +407,9 @@ export const actionsList = [
     },
     perform: wrapExecution(async (agent, itemType) => {
       const success = await skills.takeFromFurnace(agent.bot, itemType);
-      return success
+      skills.log(agent.bot, success
         ? `Successfully took ${itemType} from furnace.`
-        : `Failed to take ${itemType} from furnace.`;
+        : `Failed to take ${itemType} from furnace.`);
     }),
   },
   {
@@ -438,18 +439,21 @@ export const actionsList = [
         let fishing_rod = agent.bot.inventory.items().find((item) => item.name === "fishing_rod");
         if (!fishing_rod) {
           skills.log(agent.bot, "No fishing rod.");
-          return "No fishing rod.";
+          return false;
         }
 
         agent.followPlayerName = null;
         agent.bot.modes.setOn("fishing", true);
-        return "Fishing has come to mind.";
+        skills.log(agent.bot, "Fishing started.");
+        return true;
       }, 
       -1, 
       null, 
       (agent) => {
         return !agent.bot.modes.isOn("fishing");
-      }),
+      },
+      "Fishing is already started."
+    ),
   },
   {
     name: "!stopFishing",

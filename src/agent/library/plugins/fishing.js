@@ -56,7 +56,7 @@ export function plugin(bot) {
         const pos = lastBobber.position;
         const parts = bot.registry.particlesByName;
 
-        if (!lastBobberPos || lastBobberPos.distanceTo(pos) > 0.25) {
+        if (!lastBobberPos || lastBobberPos.distanceTo(pos) > 0.1) {
             lastBobberPos = pos;
             await bot.lookAt(pos);
         }
