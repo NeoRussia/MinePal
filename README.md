@@ -5,7 +5,7 @@
 MinePalは生成AIの頭脳を持ったMinecraftボット（自律エージェント）です。チャットで指示を出すと行動をしてくれたり、雑談に応じてくれたりします。
 このリポジトリはleo4life2さんが作られたMinePalをベースに、シンプル化したり、バグを修正したり、釣りなどの能力を追加したりしたものです。
 
-* プレイヤーから誘われて、近くに来て釣りをするボットの様子：
+- プレイヤーから誘われて、近くに来て釣りをするボットの動画：
 [![釣りを行う例](docs/Movie_Fishing.png)](https://youtu.be/PgIKDjIai84)
 
 ## システム構成
@@ -128,15 +128,15 @@ Electronアプリケーションのビルドの前準備としてまずはフロ
 
 ## MinePalアプリケーションの使い方
 
-### 前提条件
+### 準備
 
-実行に必要なソフトウェアとAPI Key
+実行に必要な次のソフトウェアとAPI Keyを準備する。
 
 1. [Minecraft Java Edition](https://www.minecraft.net/ja-jp/about-minecraft)
 2. [OpenAI API](https://openai.com/index/openai-api/)のAPI Key（なお、MinePalで利用するデフォルトのモデルはgpt-4o-miniとtext-embedding-3-small）
 3. MinePalアプリ（[Releases](https://github.com/sonoisa/MinePal/releases)からバイナリをダウンロードする、もしくは、前述の手順でビルドする）
 
-### MinePalの起動
+### アプリケーションの起動
 
 1. [Minecraft Java Edition](https://www.minecraft.net/ja-jp/about-minecraft)をバージョン指定で起動する。  
 1.20.1で動作することは確認済み。他のバージョンでは動作しない可能性がある。
@@ -167,9 +167,11 @@ Minecraftメニューを開いて「LANに公開」ボタンを押し、ポー�
 正常に起動すれば次の画面のようにワールドにボットが現れる。  
 ![AIが参加](docs/HelloWorld_AI_Spawn.png)
 
-6. ボットが「Hello World! I am ...」と挨拶をしてきたら対話が可能となる。サバイバルモードでは挨拶まで10秒程度かかることがある。
+### ボットとの対話
 
-7. ボットに何か指示を出してみる。例えば「僕のところに来て釣りをしよう」とチャットで話しかけると、プレイヤーの近くに来て釣りを開始してくれる。
+1. ボットがワールドに参加してきて「Hello World! I am ...」と挨拶をしてきたらボットの起動が完了したサインである。ここから対話が可能となる。サバイバルモードでは挨拶までに10秒程度かかることがある。
+
+2. ボットに何か指示を出してみる。例えば「僕のところに来て釣りをしよう」とチャットで話しかけると、プレイヤーの近くに来て釣りを開始してくれる。
    - プレイヤーがチャットで話しかけ：
    ![チャット](docs/Chat_AI_Commands.png)
    - ボットがプレイヤーの近くに来て釣りを開始（内部では二つのコマンド!goToPlayerと!startFishingが実行されている）：
