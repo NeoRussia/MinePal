@@ -253,6 +253,12 @@ export class Agent {
             return;
         }
 
+        const chat_model = this.prompter.chat_model;
+
+        chat_model.trace = chat_model.langfuse?.trace({
+            name: message
+        });
+
         // await this.history.add("system", "When you wish to do something, never just say you're doing it, you must pick a command from the docs and call it like !commandName(params). NEVER say anything like this: 'Sure, I've stopped.', instead say this: 'Sure, I'll stop. !stop'");
         await this.history.add(source, message);
         // Process the message and generate responses
@@ -325,6 +331,8 @@ export class Agent {
                 break;
             }
         }
+
+        chat_model.trace = null;
 
         this.history.save();
         this.bot.emit('finished_executing');
