@@ -2,7 +2,7 @@ import OpenAI from 'openai';
 import { Langfuse } from "langfuse";
 import { Thought } from "../agent/thought.js";
 
-const DEBUG = true;
+const DEBUG = false;
 
 const MAX_RETRIES = 2;
 // const REQUEST_TIMEOUT = 3000; // msec
