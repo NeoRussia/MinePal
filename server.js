@@ -203,7 +203,6 @@ function startServer() {
         newSettings.allow_insecure_coding = false;
         newSettings.code_timeout_mins = 10;
         newSettings.auth = "offline";
-        newSettings.load_memory = true;
 
         Object.assign(settings, newSettings);
         fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 4));

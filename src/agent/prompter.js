@@ -6,6 +6,8 @@ import { stringifyTurns } from '../utils/text.js';
 import { getCommand } from './commands/index.js';
 
 import { GPT } from '../models/gpt.js';
+import { Thought } from './thought.js';
+import { MlxLM } from '../models/mlx_lm.js';
 
 export class Prompter {
     constructor(agent) {
@@ -25,6 +27,9 @@ export class Prompter {
             const model = new GPT(chat, embedding);
             this.chat_model = model;
             this.embedding_model = model;
+
+            // this.chat_model = new MlxLM(null);
+            // this.embedding_model = new GPT(chat, embedding);;
         }
 
         mkdirSync(`${this.agent.userDataDir}/bots/${name}`, { recursive: true });
@@ -111,25 +116,23 @@ export class Prompter {
     async promptConvo(messages) {
         let prompt = this.profile.conversing;
         prompt = await this.replaceStrings(prompt, messages, this.convo_examples);
-        let chat_response, execute_command;
-        ({ chat_response, execute_command } = await this.chat_model.sendRequest(messages, prompt) || {});
-        console.log('Chat Response:', chat_response);
-        console.log('Execute Command:', execute_command);
-        
-        if (chat_response === undefined || execute_command === undefined) {
-            return "Oops! OpenAI's server took an arrow to the knee. Mind trying that prompt again?";
-        }
+
+        let thought = await this.chat_model.think(messages, prompt);
+        let chat_response = thought.chat_response;
+        let execute_command = thought.execute_command;
+        console.log('chat_response:', chat_response);
+        console.log('execute_command:', execute_command);
         
         if (execute_command && !execute_command.startsWith('!')) {
             execute_command = '!' + execute_command;
         }
         
-        return (chat_response || "On it.") + " " + execute_command;
+        return new Thought(chat_response || "On it.", execute_command);
     }
 
     async promptMemSaving(prev_mem, to_summarize) {
         let prompt = this.profile.saving_memory;
         prompt = await this.replaceStrings(prompt, null, null, prev_mem, to_summarize);
-        return await this.chat_model.sendRequest([], prompt, '***', true);
+        return await this.chat_model.summarizeMemory([], prompt, '***');
     }
 }

@@ -7,17 +7,14 @@ const DEBUG = false;
 const MAX_RETRIES = 2;
 // const REQUEST_TIMEOUT = 3000; // msec
 
-export class GPT {
-    constructor(model_name, embedding_model_name) {
-        this.model_name = model_name || "gpt-4o-mini";
-        this.embedding_model_name = embedding_model_name || "text-embedding-3-small";
+export class MlxLM {
+    constructor(model_name) {
+        this.model_name = model_name || "mlx-community/Qwen2.5-14B-Instruct-4bit";
 
         console.log(`Using model: ${model_name}`);
-        console.log(`Using embedding model: ${embedding_model_name}`);
 
-        this.openai_api_key = process.env.OPENAI_API_KEY;
         this.openai = new OpenAI({
-            apiKey: this.openai_api_key
+            baseURL: "http://127.0.0.1:18080"
         });
 
         if (DEBUG) {
@@ -202,19 +199,6 @@ export class GPT {
     }
 
     async embed(text) {
-        let embedding_model_name = this.embedding_model_name;
-
-        try {
-            const embedding = await this.openai.embeddings.create({
-                model: embedding_model_name,
-                input: text,
-                encoding_format: "float",
-            });
-
-            return embedding.data[0].embedding;
-        } catch (err) {
-            console.log(err);
-            throw new Error('Failed to get embedding');
-        }
+        throw new Error('unimplemented');
     }
 }
