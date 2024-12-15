@@ -47,6 +47,7 @@
   "build": {
     "appId": "com.nemosai.minepal",
     "productName": "Minepal",
+    "afterSign": "notarize.js",
     "directories": {
       "buildResources": "build"
     },
@@ -69,7 +70,6 @@
       "category": "public.app-category.games",
       "icon": "build/icon.icns",
       "entitlements": "build/entitlements.plist",
-      "identity": null,
       "hardenedRuntime": true,
       "target": [
         "dmg"
