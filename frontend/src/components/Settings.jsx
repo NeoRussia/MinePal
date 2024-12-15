@@ -6,7 +6,7 @@ function Settings({ settings, setSettings, handleSettingChange, settingNotes, se
     <div className="settings">
       <div className="setting-item">
         <label htmlFor="player_username">
-          player username:
+          Player username:
           {settingNotes.player_username && <span className="setting-note"> ({settingNotes.player_username})</span>}
         </label>
         <input
@@ -42,7 +42,7 @@ function Settings({ settings, setSettings, handleSettingChange, settingNotes, se
       </div>
       <div className="setting-item">
         <label htmlFor="minecraft_version">
-          minecraft version:
+          Minecraft version:
           {settingNotes.minecraft_version && <span className="setting-note"> ({settingNotes.minecraft_version})</span>}
         </label>
         <input
@@ -80,8 +80,22 @@ function Settings({ settings, setSettings, handleSettingChange, settingNotes, se
           <span className="slider"></span>
         </label>
       </div>
+      <div className="setting-item">
+        <label htmlFor="load_memory">
+          Load previous memory:
+        </label>
+        <label className="switch">
+          <input
+            id="load_memory"
+            type="checkbox"
+            checked={settings.load_memory}
+            onChange={(e) => handleSettingChange('load_memory', e.target.checked)}
+          />
+          <span className="slider"></span>
+        </label>
+      </div>
       <label htmlFor="profiles">
-          your pals:
+          Your pals:
       </label>
       <Profiles
         profiles={settings.profiles}

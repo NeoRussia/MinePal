@@ -7,7 +7,7 @@ export class History {
     constructor(agent) {
         this.agent = agent;
         this.name = agent.name;
-        this.memory_fp = `${this.agent.userDataDir}/bots/${this.name}/memory.json`;
+        // this.memory_fp = `${this.agent.userDataDir}/bots/${this.name}/memory.json`;
         this.turns = [];
 
         // These define an agent's long term memory
@@ -17,29 +17,31 @@ export class History {
         this.max_messages = 30;
     }
 
-    async initDB() {
+    async initDB(load_memory) {
         const file = join(this.agent.userDataDir, 'bots', this.name, 'lowdb.json');
         const defaultData = { memory: '', turns: [], modes: {}, memory_bank: {} };
         const adapter = new JSONFile(file);
         this.db = new Low(adapter, defaultData);
 
-        await this.db.read();
+        if (load_memory) {
+            await this.db.read();
+        }
 
         // Check if memory.json exists and LowDB is empty
-        if (existsSync(this.memory_fp) && this.db.data.memory === '' && this.db.data.turns.length === 0) {
-            try {
-                const data = readFileSync(this.memory_fp, 'utf8');
-                const obj = JSON.parse(data);
-                this.db.data.memory = obj.memory;
-                this.db.data.turns = obj.turns;
-                if (obj.modes) this.db.data.modes = obj.modes;
-                if (obj.memory_bank) this.db.data.memory_bank = obj.memory_bank;
-                await this.db.write();
-                unlinkSync(this.memory_fp); // Delete the old memory.json file
-            } catch (err) {
-                console.error(`Error reading ${this.name}'s memory file: ${err.message}`);
-            }
-        }
+        // if (existsSync(this.memory_fp) && this.db.data.memory === '' && this.db.data.turns.length === 0) {
+        //     try {
+        //         const data = readFileSync(this.memory_fp, 'utf8');
+        //         const obj = JSON.parse(data);
+        //         this.db.data.memory = obj.memory;
+        //         this.db.data.turns = obj.turns;
+        //         if (obj.modes) this.db.data.modes = obj.modes;
+        //         if (obj.memory_bank) this.db.data.memory_bank = obj.memory_bank;
+        //         await this.db.write();
+        //         unlinkSync(this.memory_fp); // Delete the old memory.json file
+        //     } catch (err) {
+        //         console.error(`Error reading ${this.name}'s memory file: ${err.message}`);
+        //     }
+        // }
 
         this.memory = this.db.data.memory;
         this.turns = this.db.data.turns;
@@ -89,10 +91,6 @@ export class History {
         this.db.data.memory_bank = this.agent.memory_bank.getJson();
         
         await this.db.write();
-    }
-
-    async load() {
-        await this.initDB();
     }
 
     clear() {

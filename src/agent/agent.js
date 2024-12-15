@@ -78,8 +78,7 @@ export class Agent {
 
         initModes(this);
 
-        if (load_mem)
-            this.history.load();
+        await this.history.initDB(load_mem);
 
         this.bot.modes.setOn("fishing", false); // Forcefully disable fishing mode at startup to prevent the bot from fishing with its face in an incorrect direction if the mode is enabled.
 

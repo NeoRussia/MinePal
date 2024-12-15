@@ -23,6 +23,7 @@ function App() {
     player_username: "",
     profiles: [],
     whisper_to_player: false,
+    load_memory: true,
     language: 'en',
     openai_api_key: ''
   });
