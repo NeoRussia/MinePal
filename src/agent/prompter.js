@@ -7,6 +7,7 @@ import { getCommand } from './commands/index.js';
 
 import { GPT } from '../models/gpt.js';
 import { Thought } from './thought.js';
+import { MlxLM } from '../models/mlx_lm.js';
 
 export class Prompter {
     constructor(agent) {
@@ -26,6 +27,9 @@ export class Prompter {
             const model = new GPT(chat, embedding);
             this.chat_model = model;
             this.embedding_model = model;
+
+            // this.chat_model = new MlxLM(null);
+            // this.embedding_model = new GPT(chat, embedding);;
         }
 
         mkdirSync(`${this.agent.userDataDir}/bots/${name}`, { recursive: true });
