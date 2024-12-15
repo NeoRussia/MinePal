@@ -76,7 +76,7 @@ function numParams(command) {
 
 function stringifyCommand(command) {
     let result = command.commandName;
-    result += "(" + (command.args.map((arg) => { return typeof arg === "string"? `"${arg}"` : "" + arg }).join(", ")) + ")";
+    result += "(" + (command.args.map((arg) => { return typeof arg === "string"? `'${arg}'` : "" + arg }).join(", ")) + ")";
     return result;
 }
 

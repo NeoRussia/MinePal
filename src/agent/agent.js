@@ -10,6 +10,7 @@ import { MemoryBank } from './memory_bank.js';
 import fs from 'fs/promises';
 import { queryList } from './commands/queries.js';
 import * as world from "./library/world.js";
+import { Thought } from './thought.js';
 
 const queryMap = {
     stats: queryList.find(query => query.name === "!stats").perform,
@@ -294,29 +295,22 @@ export class Agent {
             this.latestHUD = newHUD; // Update latestHUD
 
             history = this.history.getHistory(); // Get updated history
-            let res = await this.prompter.promptConvo(history);
+            let thought = await this.prompter.promptConvo(history);
+            let full_response = JSON.stringify(thought.getJson());
 
             // Now we parse and execute commands.
-            let command_name = containsCommand(res);
+            let command_name = containsCommand(thought.execute_command);
             // add user message
             if (command_name) {
-                console.log(`Full response: ""${res}""`)
-                res = truncCommandMessage(res);
+                console.log(`Full response: "${full_response}"`)
                 if (!commandExists(command_name)) {
                     this.history.add('system', `Command ${command_name} does not exist. Use !newAction to perform custom actions.`);
                     console.log('Agent hallucinated command:', command_name)
                     continue;
                 }
-                let pre_message = res.substring(0, res.indexOf(command_name)).trim();
-                let chat_message = "";
-                // let chat_message = `*used ${command_name.substring(1)}*`;
-                // if (pre_message.length > 0)
-                //     chat_message = `${pre_message}  ${chat_message}`;
-                if (pre_message.length > 0)
-                    chat_message = `${pre_message}`;
-                await this.sendMessage(chat_message, true);
+                await this.sendThoughtMessage(thought, true);
 
-                let execute_res = await executeCommand(this, res);
+                let execute_res = await executeCommand(this, thought.execute_command);
 
                 console.log(`Agent executed: ${command_name} and got: "${execute_res}"`);
 
@@ -324,10 +318,9 @@ export class Agent {
                     this.history.add('system', execute_res);
                 else
                     break;
-            }
-            else {
-                await this.sendMessage(res, true);
-                console.log('Purely conversational response:', res);
+            } else {
+                await this.sendThoughtMessage(thought, true);
+                console.log('Purely conversational response:', full_response);
                 break;
             }
         }
@@ -474,14 +467,24 @@ export class Agent {
 
     /**
      * Sends a chat message and updates the conversation history.
-     * @param {string} message - The message to send.
+     * @param {Thought} thought - The message to send.
      * @param {boolean} clean - Whether to clean the message before sending.
      */
-    async sendMessage(message, clean = false) {
+    async sendThoughtMessage(thought, clean = false) {
+        let message = thought.chat_response;
         if (clean) {
             message = this.cleanChat(message);
         }
         this.bot.chat(message);
-        await this.history.add(this.name, message);
+        await this.history.add(this.name, JSON.stringify(thought.getJson()));
+    }
+
+    /**
+     * Sends a chat message and updates the conversation history.
+     * @param {string} message - The message to send.
+     * @param {boolean} clean - Whether to clean the message before sending.
+     */
+    async sendMessage(message, clean = false) {
+        await this.sendThoughtMessage(new Thought(message, ""), clean);
     }
 }

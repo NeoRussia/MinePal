@@ -1,24 +1,8 @@
 import OpenAI from 'openai';
 import { Langfuse } from "langfuse";
+import { Thought } from "../agent/thought.js";
 
-const DEBUG = false;
-
-const MINEPAL_RESPONSE_FORMAT = {
-    type: "json_schema",
-    json_schema: {
-        name: "minepal_response",
-        schema: {
-            type: "object",
-            properties: {
-                chat_response: { type: "string" },
-                execute_command: { type: "string" }
-            },
-            required: ["chat_response", "execute_command"],
-            additionalProperties: false
-        },
-        strict: true
-    }
-};
+const DEBUG = true;
 
 const MAX_RETRIES = 2;
 // const REQUEST_TIMEOUT = 3000; // msec
@@ -53,15 +37,15 @@ export class GPT {
         }
     }
 
-    async sendRequest(turns, systemMessage, stop_seq='***', memSaving=false) {
+    async think(turns, systemMessage, stop_seq='***') {
         let messages = [{'role': 'system', 'content': systemMessage.trim()}].concat(turns);
 
         let trace = this.trace || this.langfuse?.trace({
-            name: memSaving? "Memory optimization" : "Response generation",
+            name: "Response generation",
         });
 
         const span = trace?.span({
-            name: memSaving? "Memory optimization" : "Response generation",
+            name: "Response generation",
             input: messages
         });
 
@@ -69,18 +53,16 @@ export class GPT {
         while (attempt <= MAX_RETRIES) {
             try {
                 let result;
-                if (memSaving) {
-                    result = await this._sendStringRequest(messages, stop_seq);
-                } else {
-                    result = await this._sendJsonRequest(messages, stop_seq);
-                }
+                result = await this._sendJsonRequest(messages, stop_seq, span);
                 
                 span?.update({
                     endTime: new Date(),
                     output: result
                 });
 
-                return result;
+                const thought = new Thought(result.chat_response || "", result.execute_command || "");
+
+                return thought;
             } catch (err) {
                 console.error("Request failed:", err);
                 // console.error("Request failed");
@@ -88,7 +70,7 @@ export class GPT {
             }
         }
 
-        let res = "My brain disconnected, try again.";
+        let res = "Oops! OpenAI's server took an arrow to the knee. Mind trying that prompt again?";
 
         span?.update({
             endTime: new Date(),
@@ -96,35 +78,17 @@ export class GPT {
             level: "ERROR"
         });
 
-        if (memSaving) {
-            return res;
-        } else {
-            return { chat_response: res };
-        }
+        return new Thought(res);
     }
 
-    async _sendJsonRequest(messages, stop_seq) {
+    async _sendJsonRequest(messages, stop_seq, span) {
         const modelParameters = {
             model: this.model_name,
             stop: stop_seq,
-            max_completion_tokens: 512,
-            response_format: MINEPAL_RESPONSE_FORMAT,
-            logit_bias: {
-                "198": -100,
-                "279": -100,
-                "2499": -100,
-                "4707": -100,
-                "27559": -100,
-                "37680": -100,
-                "70224": -100,
-                "21301": -100,
-                "128841": -100,
-                "160468": -100,
-                "64469": -100
-            }  // Temporary workaround: https://github.com/openai/openai-node/issues/1185
+            max_completion_tokens: 512
         };
 
-        const generation = this.trace?.generation({
+        const generation = span?.generation({
             name: "Response generation",
             model: this.model_name,
             modelParameters: modelParameters,
@@ -158,13 +122,55 @@ export class GPT {
         }
     }
 
-    async _sendStringRequest(messages, stop_seq) {
+    async summarizeMemory(turns, systemMessage, stop_seq='***') {
+        let messages = [{'role': 'system', 'content': systemMessage.trim()}].concat(turns);
+
+        let trace = this.trace || this.langfuse?.trace({
+            name: "Memory optimization",
+        });
+
+        const span = trace?.span({
+            name: "Memory optimization",
+            input: messages
+        });
+
+        let attempt = 0;    
+        while (attempt <= MAX_RETRIES) {
+            try {
+                let result;
+                result = await this._sendStringRequest(messages, stop_seq, span);
+                
+                span?.update({
+                    endTime: new Date(),
+                    output: result
+                });
+
+                return result;
+            } catch (err) {
+                console.error("Request failed:", err);
+                // console.error("Request failed");
+                attempt++;
+            }
+        }
+
+        let res = "Oops! OpenAI's server took an arrow to the knee. Mind trying that prompt again?";
+
+        span?.update({
+            endTime: new Date(),
+            statusMessage: res,
+            level: "ERROR"
+        });
+
+        return res;
+    }
+
+    async _sendStringRequest(messages, stop_seq, span) {
         const modelParameters = {
             model: this.model_name,
             stop: stop_seq
         };
 
-        const generation = this.trace?.generation({
+        const generation = span?.generation({
             name: "Response generation",
             model: this.model_name,
             modelParameters: modelParameters,
