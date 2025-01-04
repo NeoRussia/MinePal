@@ -28,7 +28,6 @@ dist/
 Thumbs.db
 
 agent-runlogs/
-node_modules*/
+node_modules*
 
-node_modules.nosync
-node_modules
+.venv
